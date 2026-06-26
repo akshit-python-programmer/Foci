@@ -23,9 +23,13 @@ Foci is a desktop planner I built for myself because most productivity apps felt
 
 ## Demo
 
-https://github.com/akshit-python-programmer/Foci/raw/main/demo/demo.mp4
+| Calendar & event drag | Focus timer |
+|:---:|:---:|
+| ![Calendar view](demo/demo-calendar.gif) | ![Focus timer](demo/demo-focus-timer.gif) |
 
-> [`demo/demo.mp4`](demo/demo.mp4) — full walkthrough (782 KB)
+| Theme switcher | Confetti & drag-reorder |
+|:---:|:---:|
+| ![Themes](demo/demo-themes.gif) | ![Confetti](demo/demo-confetti.gif) |
 
 ---
 
