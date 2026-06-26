@@ -31,6 +31,68 @@ Foci is a desktop planner I built for myself because most productivity apps felt
 |:---:|:---:|
 | ![Themes](demo/demo-themes.gif) | ![Confetti](demo/demo-confetti.gif) |
 
+**Full walkthrough →** [`demo/demo.mp4`](demo/demo.mp4)
+
+---
+
+## Install & run
+
+```bash
+# 1. Clone
+git clone https://github.com/akshit-python-programmer/Foci.git
+cd Foci
+
+# 2. Create a virtual environment (recommended)
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run
+python main.py
+```
+
+To try just the standalone focus timer:
+
+```bash
+python progress.py
+```
+
+### Build a standalone .exe
+
+```bash
+pip install pyinstaller
+pyinstaller main.spec
+# output in dist/
+```
+
+### Optional: Google Calendar sync
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create an OAuth 2.0 Desktop client and enable the Calendar API.
+2. Download `credentials.json` → place in `assets/`.
+3. First run opens a browser to authorize; token stored locally as `assets/token.json`.
+
+Both files are git-ignored and must never be committed.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Language | Python 3.10+ |
+| Rendering & input | pygame 2 + `pygame.gfxdraw` |
+| UI paradigm | Hand-built immediate-mode GUI (no framework) |
+| Audio | `pygame.mixer` (mp3/wav playback, fade, seek) |
+| System media keys | WinRT `winrt.windows.media` (SMTC) |
+| Persistence | JSON (local flat files) |
+| Packaging | PyInstaller (`main.spec`) → standalone `.exe` |
+| Calendar sync (optional) | `google-api-python-client` + `google-auth-oauthlib` |
+
 ---
 
 ## Features
@@ -96,70 +158,6 @@ Foci is a desktop planner I built for myself because most productivity apps felt
 ### Optional: Google Calendar sync
 - `google_calendar.py` — standalone OAuth2 flow using `google-api-python-client`
 - Bring your own `credentials.json` from Google Cloud Console; token is stored locally and never committed
-
----
-
-## Tech stack
-
-| Layer | Choice |
-|---|---|
-| Language | Python 3.10+ |
-| Rendering & input | pygame 2 + `pygame.gfxdraw` |
-| UI paradigm | Hand-built immediate-mode GUI (no framework) |
-| Audio | `pygame.mixer` (mp3/wav playback, fade, seek) |
-| System media keys | WinRT `winrt.windows.media` (SMTC) |
-| Persistence | JSON (local flat files) |
-| Packaging | PyInstaller (`main.spec`) → standalone `.exe` |
-| Calendar sync (optional) | `google-api-python-client` + `google-auth-oauthlib` |
-
----
-
-## Install & run
-
-```bash
-# 1. Clone
-git clone https://github.com/akshitkumarlall/foci.git
-cd foci
-
-# 2. Create a virtual environment (recommended)
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Run
-python main.py
-```
-
-To try just the standalone focus timer:
-
-```bash
-python progress.py
-```
-
----
-
-## Optional: Google Calendar sync
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), create an OAuth 2.0 Desktop client and enable the Calendar API.
-2. Download `credentials.json` → place in `assets/`.
-3. First run opens a browser to authorize; token stored locally as `assets/token.json`.
-
-Both files are git-ignored and must never be committed.
-
----
-
-## Build a standalone .exe
-
-```bash
-pip install pyinstaller
-pyinstaller main.spec
-# output in dist/
-```
 
 ---
 
