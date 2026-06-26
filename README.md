@@ -21,49 +21,11 @@ Foci is a desktop planner I built for myself because most productivity apps felt
 
 ![Foci main view](demo/example%20of%20how%20it%20looks%20like%20.png)
 
-## Demo clips
+## Demo
 
-<table>
-  <tr>
-    <td align="center"><b>Calendar & events</b></td>
-    <td align="center"><b>Focus timer</b></td>
-    <td align="center"><b>Task check-off + lofi player</b></td>
-  </tr>
-  <tr>
-    <td>
+https://github.com/akshit-python-programmer/Foci/raw/main/demo/demo.mp4
 
-https://github.com/user-attachments/assets/calendar-view
-
-> [`demo/calendar view.mp4`](demo/calendar%20view.mp4)
-    </td>
-    <td>
-
-> [`demo/focus timer feature.mp4`](demo/focus%20timer%20feature.mp4)
-    </td>
-    <td>
-
-> [`demo/task check off + lofi music player.mp4`](demo/task%20check%20off%20%20%2B%20lofi%20music%20player.mp4)
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><b>Theme switcher</b></td>
-    <td align="center"><b>Full walkthrough</b></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>
-
-> [`demo/different themes.mp4`](demo/different%20themes.mp4)
-    </td>
-    <td>
-
-> [`demo/small demo.mp4`](demo/small%20demo.mp4)
-    </td>
-    <td></td>
-  </tr>
-</table>
-
-> **Note:** GitHub renders `.mp4` files natively when you open the link. Click any filename above to watch in-browser.
+> [`demo/demo.mp4`](demo/demo.mp4) — full walkthrough (782 KB)
 
 ---
 
