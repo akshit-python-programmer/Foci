@@ -1,0 +1,7 @@
+Icon collection: Lucide (https://lucide.dev)
+License: ISC License — free for personal and commercial use.
+https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+These symbols were downloaded and rasterized to 96x96 PNGs for use as
+event / to-do icons in Foci. Both the original .svg and the .png are kept;
+the stroke colour was set to #2b2b3a so the glyphs read on light event tiles.

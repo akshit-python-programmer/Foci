@@ -1,0 +1,21 @@
+[
+  {
+    "type": "folder",
+    "name": "Example Folder",
+    "is_open": true,
+    "children": [
+      {
+        "type": "todo",
+        "title": "An example task",
+        "done": false,
+        "tag": "today",
+        "date": "2025-01-01"
+      }
+    ]
+  },
+  {
+    "type": "todo",
+    "title": "A top-level task",
+    "done": false
+  }
+]

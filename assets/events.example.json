@@ -1,0 +1,13 @@
+{
+  "2025-01-01": [
+    {
+      "title": "Deep work block",
+      "hour": 9,
+      "minute": 0,
+      "duration": 90,
+      "done": false,
+      "color": [181, 234, 215],
+      "icon": 5
+    }
+  ]
+}

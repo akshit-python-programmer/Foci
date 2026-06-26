@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Build / packaging artifacts ---
+build/
+dist/
+prev builds/
+*.exe
+*.manifest
+
+# --- Editor / OS / tooling ---
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+**/__MACOSX/
+
+# --- Secrets (Google Calendar OAuth) ---
+assets/credentials.json
+assets/token.json
+
+# --- Personal local state (private; templates provided as *.example.json) ---
+assets/settings.json
+assets/todos.json
+assets/events.json
+assets/player_data.json
+
+# --- Stray scratch files (not part of the app) ---
+try.py

@@ -1,0 +1,7 @@
+# Core
+pygame>=2.5
+
+# Optional: only needed for Google Calendar sync (google_calendar.py)
+google-api-python-client>=2.0
+google-auth>=2.0
+google-auth-oauthlib>=1.0

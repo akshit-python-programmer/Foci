@@ -1,0 +1,9 @@
+{
+  "theme": "Midnight Deep",
+  "start_hour": 5,
+  "end_hour": 23,
+  "sounds_on": true,
+  "hour_height": 80,
+  "confetti_on": true,
+  "font_path": "assets/Domine.ttf"
+}
