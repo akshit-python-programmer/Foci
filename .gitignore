@@ -37,3 +37,6 @@ assets/player_data.json
 
 # --- Stray scratch files (not part of the app) ---
 try.py
+
+# --- Local trash folder (review and delete when ready) ---
+_trash/
