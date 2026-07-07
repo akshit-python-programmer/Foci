@@ -558,15 +558,13 @@ def sanitize_todos(items):
 
 def load_settings():
     global settings, START_HOUR, END_HOUR, current_theme, HOUR_HEIGHT
+    settings = sanitize_settings({})
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r") as f:
                 settings = sanitize_settings(json.load(f))
         except (json.JSONDecodeError, TypeError, ValueError):
             print("Warning: Could not read settings.json. Using defaults.")
-            settings = sanitize_settings({})
-    else:
-        settings = sanitize_settings({})
 
     set_theme(settings["theme"])
     START_HOUR = settings["start_hour"]
@@ -2429,8 +2427,7 @@ def simple_music_player_process(font_path):
     current_index = 0
     is_playing = False
     volume = 0.5
-    if AUDIO_AVAILABLE:
-        pygame.mixer.music.set_volume(volume)
+    pygame.mixer.music.set_volume(volume)
     song_length = 0
     seek_offset = 0
 
