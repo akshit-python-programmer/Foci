@@ -15,7 +15,12 @@ import math
 from utility import * # Import all helper functions
 pygame.mixer.pre_init(44100, -16, 2, 2048) # Ensure high quality audio
 pygame.init()
-pygame.mixer.init()
+AUDIO_AVAILABLE = True
+try:
+    pygame.mixer.init()
+except pygame.error as e:
+    AUDIO_AVAILABLE = False
+    print(f"Audio disabled: {e}")
 
 WIDTH, HEIGHT = 1000, 700
 MIN_WIDTH, MIN_HEIGHT = 800, 600
@@ -31,6 +36,7 @@ except Exception as e:
 lofi_on = False
 
 ASSETS_DIR = resource_path("assets")
+DEFAULT_FONT_PATH = os.path.join(ASSETS_DIR, "Domine.ttf")
 
 try:
     BACKGROUND_IMAGE = pygame.image.load(
@@ -67,7 +73,7 @@ EVENT_DONE_COLOR = (120, 220, 120)
 PARTICLE_COLORS = [(120, 220, 120), (255, 255, 120), (180, 255, 180), (200, 255, 200)]
 
 DING_SOUND = None
-if os.path.exists(os.path.join(ASSETS_DIR, "ding.wav")):
+if AUDIO_AVAILABLE and os.path.exists(os.path.join(ASSETS_DIR, "ding.wav")):
     try:
         DING_SOUND = pygame.mixer.Sound(resource_path(os.path.join(ASSETS_DIR, "ding.wav")))
     except:
@@ -123,7 +129,7 @@ if os.path.exists(MUSIC_DIR):
 
 currently_playing_index = -1
 
-if MUSIC_FILES:
+if AUDIO_AVAILABLE and MUSIC_FILES:
     pygame.mixer.music.set_volume(0.5)
 confetti_particles = []
 CONFETTI_COLORS = [
@@ -386,8 +392,162 @@ settings = {
     "sounds_on": True,
     "hour_height": 40,
     "confetti_on": True,
-    "font_path": os.path.join(ASSETS_DIR, "Domine.ttf"),
+    "font_path": DEFAULT_FONT_PATH,
 }
+
+
+def write_json_file(path, data, *, indent=2, ensure_ascii=True):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temp_path = f"{path}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+    os.replace(temp_path, path)
+
+
+def safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def normalize_font_path(font_path):
+    if isinstance(font_path, str) and font_path:
+        candidates = [font_path]
+        if not os.path.isabs(font_path):
+            candidates.append(resource_path(font_path))
+            candidates.append(os.path.join(ASSETS_DIR, os.path.basename(font_path)))
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
+    return DEFAULT_FONT_PATH if os.path.exists(DEFAULT_FONT_PATH) else None
+
+
+def sanitize_settings(loaded_settings):
+    sanitized = settings.copy()
+    if isinstance(loaded_settings, dict):
+        sanitized.update(loaded_settings)
+
+    theme = sanitized.get("theme")
+    if theme not in THEMES:
+        theme = settings["theme"]
+
+    start_hour = clamp(safe_int(sanitized.get("start_hour"), settings["start_hour"]), 0, 12)
+    end_hour = clamp(safe_int(sanitized.get("end_hour"), settings["end_hour"]), 13, 23)
+    if end_hour <= start_hour:
+        start_hour, end_hour = settings["start_hour"], settings["end_hour"]
+
+    hour_height = clamp(safe_int(sanitized.get("hour_height"), settings["hour_height"]), 30, 80)
+    font_path = normalize_font_path(sanitized.get("font_path"))
+
+    return {
+        "theme": theme,
+        "start_hour": start_hour,
+        "end_hour": end_hour,
+        "sounds_on": bool(sanitized.get("sounds_on", settings["sounds_on"])) and AUDIO_AVAILABLE,
+        "hour_height": hour_height,
+        "confetti_on": bool(sanitized.get("confetti_on", settings["confetti_on"])),
+        "font_path": font_path,
+    }
+
+
+def sanitize_event(raw_event):
+    if not isinstance(raw_event, dict):
+        return None
+
+    event = dict(raw_event)
+    event["title"] = str(event.get("title") or "Untitled")
+
+    try:
+        event["hour"] = clamp(int(event.get("hour", START_HOUR)), 0, 23)
+    except (TypeError, ValueError):
+        event["hour"] = START_HOUR
+
+    try:
+        event["minute"] = clamp(int(event.get("minute", 0)), 0, 59)
+    except (TypeError, ValueError):
+        event["minute"] = 0
+
+    try:
+        event["duration"] = clamp(int(event.get("duration", 60)), 15, 24 * 60)
+    except (TypeError, ValueError):
+        event["duration"] = 60
+
+    event["done"] = bool(event.get("done", False))
+
+    color = event.get("color")
+    if not (
+        isinstance(color, (list, tuple))
+        and len(color) == 3
+        and all(isinstance(c, int) and 0 <= c <= 255 for c in color)
+    ):
+        color = [181, 234, 215]
+    event["color"] = list(color)
+
+    try:
+        event["icon"] = max(0, int(event.get("icon", 0)))
+    except (TypeError, ValueError):
+        event["icon"] = 0
+
+    google_id = event.get("google_id")
+    if google_id is not None and not isinstance(google_id, str):
+        event.pop("google_id", None)
+
+    return event
+
+
+def get_coin_frame_surface():
+    if not coin_sprite_sheet:
+        return None
+
+    frame_width = coin_animation.get("frame_width", 0)
+    frame_height = coin_animation.get("frame_height", 0)
+    if frame_width <= 0 or frame_height <= 0:
+        return None
+
+    frame_rect = pygame.Rect(
+        coin_animation["current_frame"] * frame_width,
+        coin_animation["current_coin_type"] * frame_height,
+        frame_width,
+        frame_height,
+    )
+    if not coin_sprite_sheet.get_rect().contains(frame_rect):
+        return None
+    return coin_sprite_sheet.subsurface(frame_rect)
+
+
+PLAYER_DATA_FILE = resource_path(os.path.join(ASSETS_DIR, "player_data.json"))
+
+
+def save_player_data():
+    write_json_file(PLAYER_DATA_FILE, {"coins": max(0, int(user_coins))})
+
+
+def sanitize_todos(items):
+    if not isinstance(items, list):
+        return []
+
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_type = item.get("type")
+        if item_type == "folder":
+            cleaned.append({
+                "type": "folder",
+                "name": str(item.get("name") or "Untitled Folder"),
+                "is_open": bool(item.get("is_open", False)),
+                "children": sanitize_todos(item.get("children", [])),
+            })
+        else:
+            cleaned.append({
+                "type": "todo",
+                "title": str(item.get("title") or "Untitled To-do"),
+                "done": bool(item.get("done", False)),
+                **({"tag": item["tag"]} if isinstance(item.get("tag"), str) else {}),
+                **({"date": item["date"]} if isinstance(item.get("date"), str) else {}),
+            })
+    return cleaned
 
 
 def load_settings():
@@ -395,24 +555,21 @@ def load_settings():
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r") as f:
-                loaded_settings = json.load(f)
-                settings.update(loaded_settings)  # Update defaults with loaded values
-        except (json.JSONDecodeError, TypeError):
+                settings = sanitize_settings(json.load(f))
+        except (json.JSONDecodeError, TypeError, ValueError):
             print("Warning: Could not read settings.json. Using defaults.")
+            settings = sanitize_settings({})
+    else:
+        settings = sanitize_settings({})
 
-    # Ensure a default font path is set if not in settings
-    if "font_path" not in settings:
-        settings["font_path"] = resource_path(os.path.join(ASSETS_DIR, "Domine.ttf"))
-
-    set_theme(settings["theme"])
+    set_theme(settings.get("theme", current_theme))
     START_HOUR = settings["start_hour"]
     END_HOUR = settings["end_hour"]
     HOUR_HEIGHT = settings["hour_height"]
 
 
 def save_settings():
-    with open(SETTINGS_FILE, "w") as f:
-        json.dump(settings, f, indent=2)
+    write_json_file(SETTINGS_FILE, settings)
 
 
 DATA_FILE = resource_path(os.path.join(ASSETS_DIR, "events.json"))
@@ -445,7 +602,7 @@ def load_todos():
     if os.path.exists(TODO_FILE):
         try:
             with open(TODO_FILE, "r", encoding="utf-8") as f:
-                todos = json.load(f)
+                todos = sanitize_todos(json.load(f))
         except (json.JSONDecodeError, TypeError):
             todos = []
     else:
@@ -474,8 +631,7 @@ def load_todos():
 
 
 def save_todos():
-    with open(TODO_FILE, "w", encoding="utf-8") as f:
-        json.dump(todos, f, indent=2)
+    write_json_file(TODO_FILE, todos)
     # After saving, reload to re-apply sorting logic
     load_todos()
 
@@ -483,8 +639,21 @@ def save_todos():
 def load_events():
     global all_events, events, user_coins
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            all_events = json.load(f)
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                raw_events = json.load(f)
+            if isinstance(raw_events, dict):
+                all_events = {
+                    date_key: [event for event in (sanitize_event(ev) for ev in date_events) if event is not None]
+                    if isinstance(date_events, list) else []
+                    for date_key, date_events in raw_events.items()
+                    if isinstance(date_key, str)
+                }
+            else:
+                all_events = {}
+        except (json.JSONDecodeError, TypeError):
+            print("Warning: Could not read events.json. Starting with empty events.")
+            all_events = {}
     else:
         all_events = {}
     
@@ -496,10 +665,10 @@ def load_events():
     
     # Load coins from a separate simple file
     try:
-        with open(resource_path(os.path.join(ASSETS_DIR, "player_data.json")), "r") as f:
+        with open(PLAYER_DATA_FILE, "r", encoding="utf-8") as f:
             player_data = json.load(f)
-            user_coins = player_data.get("coins", 0)
-    except (FileNotFoundError, json.JSONDecodeError):
+            user_coins = max(0, int(player_data.get("coins", 0)))
+    except (FileNotFoundError, json.JSONDecodeError, TypeError, ValueError):
         user_coins = 0
 
 
@@ -523,8 +692,7 @@ def load_coin_animation():
 def save_events():
     date_str = selected_date.strftime("%Y-%m-%d")
     all_events[date_str] = events
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(all_events, f, indent=2, ensure_ascii=False)
+    write_json_file(DATA_FILE, all_events, ensure_ascii=False)
 
 
 def get_event_at_time(hour, minute):
@@ -1493,7 +1661,11 @@ def draw_day_view(event_layout, dragging_event=None, is_dragging_over_todo=False
         
         # --- Display coins earned from each event ---
         coins_for_event = int(event.get("duration", 60) / 5)
-        coin_icon_small = pygame.transform.smoothscale(coin_sprite_sheet.subsurface(pygame.Rect(0,0,coin_animation['frame_width'], coin_animation['frame_height'])), (16, 16)) if coin_sprite_sheet else pygame.Surface((16,16))
+        coin_frame = get_coin_frame_surface()
+        coin_icon_small = (
+            pygame.transform.smoothscale(coin_frame, (16, 16))
+            if coin_frame is not None else pygame.Surface((16, 16), pygame.SRCALPHA)
+        )
         coin_val_text = get_font_wrapper(14).render(f"+{coins_for_event}", True, text_color)
         
         screen.blit(coin_icon_small, (event_rect.right - 12 - 10, event_y + event_height - 30))
@@ -2191,7 +2363,11 @@ def simple_music_player_process(font_path):
     """A new, simplified, and vibrant music player process."""
     pygame.init() # noqa
     pygame.mixer.pre_init(44100, -16, 2, 2048) # Higher quality audio
-    pygame.mixer.init() # noqa
+    try:
+        pygame.mixer.init() # noqa
+    except pygame.error as e:
+        print(f"Music player audio disabled: {e}")
+        return
 
     try:
         import ctypes
@@ -2241,7 +2417,8 @@ def simple_music_player_process(font_path):
     current_index = 0
     is_playing = False
     volume = 0.5
-    pygame.mixer.music.set_volume(volume)
+    if AUDIO_AVAILABLE:
+        pygame.mixer.music.set_volume(volume)
     song_length = 0
     seek_offset = 0
 
@@ -2563,6 +2740,8 @@ def simple_music_player_process(font_path):
 
 def run_music_player():
     """Starts a separate process for the music player window."""
+    if not AUDIO_AVAILABLE or not MUSIC_FILES:
+        return
     if any(p.name == "MusicPlayerProcess" for p in multiprocessing.active_children()):
         return
 
@@ -2586,8 +2765,8 @@ def show_credits():
     SHADOW_COLOR = (15, 20, 30)
 
     # Fonts
-    font_title = get_font(48)
-    font_subtitle = get_font(22)
+    font_title = get_font_wrapper(48)
+    font_subtitle = get_font_wrapper(22)
     font_body = get_font_wrapper(18)
 
     win_w, win_h = 550, 450
@@ -2763,8 +2942,7 @@ def toggle_checkbox_at_pos(pos, scroll_offset):
                 # --- Earn coins on check ---
                 coins_earned = int(ev.get("duration", 60) / 5)
                 user_coins += coins_earned
-                with open(resource_path(os.path.join(ASSETS_DIR, "player_data.json")), "w") as f:
-                    json.dump({"coins": user_coins}, f)
+                save_player_data()
 
                 # --- Start Check-off Animation ---
                 event_height = ev.get("duration", 60) * (HOUR_HEIGHT / 60)
@@ -2791,8 +2969,7 @@ def toggle_checkbox_at_pos(pos, scroll_offset):
                 # --- Lose coins on uncheck ---
                 coins_lost = int(ev.get("duration", 60) / 5)
                 user_coins = max(0, user_coins - coins_lost)
-                with open(resource_path(os.path.join(ASSETS_DIR, "player_data.json")), "w") as f:
-                    json.dump({"coins": user_coins}, f)
+                save_player_data()
 
             save_events()
             return True
@@ -3091,16 +3268,13 @@ def show_coin_counter_popup(event):
                 coin_animation["last_update"] = now
                 coin_animation["current_frame"] = (coin_animation["current_frame"] + 1) % coin_animation["frames_per_row"]
 
-            frame_rect = pygame.Rect(
-                coin_animation["current_frame"] * coin_animation["frame_width"],
-                coin_animation["current_coin_type"] * coin_animation["frame_height"],
-                coin_animation["frame_width"],
-                coin_animation["frame_height"]
-            )
-            frame_image = coin_sprite_sheet.subsurface(frame_rect)
+            frame_image = get_coin_frame_surface()
             # Scale it up for the popup
-            scaled_coin = pygame.transform.smoothscale(frame_image, (80, 80))
-            win.blit(scaled_coin, (win_w // 2 - 40, 30))
+            if frame_image is not None:
+                scaled_coin = pygame.transform.smoothscale(frame_image, (80, 80))
+                win.blit(scaled_coin, (win_w // 2 - 40, 30))
+            else:
+                pygame.draw.circle(win, (255, 215, 0), (win_w // 2, 70), 40)
         else:
             # Fallback if sprite is missing
             pygame.draw.circle(win, (255, 215, 0), (win_w // 2, 70), 40)
@@ -4004,12 +4178,15 @@ def todo_edit_window(todo_text):
 
         # --- Drawing ---
         # 1. Capture the background for the glass effect
-        glass_area = screen.subsurface(win_rect).copy()
-        glass_area = pygame.transform.smoothscale(glass_area, (win_rect.width // 8, win_rect.height // 8))
-        glass_area = pygame.transform.smoothscale(glass_area, win_rect.size)
+        visible_rect = win_rect.clip(screen.get_rect())
+        if visible_rect.width > 0 and visible_rect.height > 0:
+            glass_area = screen.subsurface(visible_rect).copy()
+            blur_size = (max(1, visible_rect.width // 8), max(1, visible_rect.height // 8))
+            glass_area = pygame.transform.smoothscale(glass_area, blur_size)
+            glass_area = pygame.transform.smoothscale(glass_area, visible_rect.size)
 
-        # 2. Draw the blurred background and the semi-transparent overlay
-        screen.blit(glass_area, win_rect.topleft)
+            # 2. Draw the blurred background and the semi-transparent overlay
+            screen.blit(glass_area, visible_rect.topleft)
         pygame.draw.rect(screen, BG_COLOR, win_rect, border_radius=18)
         pygame.draw.rect(screen, BORDER_COLOR, win_rect, 1, border_radius=18)
 
@@ -4727,8 +4904,7 @@ def main_loop():
                 if event_id == "global_focus":
                     coins_earned = int(elapsed_seconds / 60) # 1 coin per minute
                     user_coins += coins_earned
-                    with open(resource_path(os.path.join(ASSETS_DIR, "player_data.json")), "w") as f:
-                        json.dump({"coins": user_coins}, f)
+                    save_player_data()
                     continue # Skip the rest of the logic for global timer
 
                 # Find the event this result belongs to
@@ -4836,15 +5012,12 @@ def main_loop():
         # --- Draw Coin Counter (after main views, before event loop) ---
         if coin_sprite_sheet:
             # Get the current frame of the animation
-            frame_rect = pygame.Rect(
-                coin_animation["current_frame"] * coin_animation["frame_width"],
-                coin_animation["current_coin_type"] * coin_animation["frame_height"],
-                coin_animation["frame_width"],
-                coin_animation["frame_height"]
-            )
-            frame_image = coin_sprite_sheet.subsurface(frame_rect)
-            scaled_coin = pygame.transform.smoothscale(frame_image, (32, 32))
-            screen.blit(scaled_coin, (WIDTH - 280, 70))
+            frame_image = get_coin_frame_surface()
+            if frame_image is not None:
+                scaled_coin = pygame.transform.smoothscale(frame_image, (32, 32))
+                screen.blit(scaled_coin, (WIDTH - 280, 70))
+            else:
+                pygame.draw.circle(screen, (255, 215, 0), (WIDTH - 280 + 16, 70 + 16), 16)
         else:
             # Fallback to a simple circle if the sprite is not loaded
             pygame.draw.circle(screen, (255, 215, 0), (WIDTH - 280 + 16, 70 + 16), 16)

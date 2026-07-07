@@ -244,7 +244,10 @@ def update_and_draw_quotes(active_quotes, screen, WIDTH, HEIGHT, font):
             # 2. Capture the visible area behind the box
             glass_area = screen.subsurface(visible_rect).copy()
             # 2. Blur it by scaling down and up
-            glass_area = pygame.transform.smoothscale(glass_area, (visible_rect.width // 8, visible_rect.height // 8))
+            glass_area = pygame.transform.smoothscale(
+                glass_area,
+                (max(1, visible_rect.width // 8), max(1, visible_rect.height // 8)),
+            )
             glass_area = pygame.transform.smoothscale(glass_area, visible_rect.size)
             # 3. Blit the blurred background
             screen.blit(glass_area, visible_rect.topleft)
@@ -405,4 +408,3 @@ def show_stats_popup(events, screen ,font_cache , font_path , WIDTH , HEIGHT):
                 mx, my = e.pos
                 if close_btn.collidepoint(mx, my):
                     return
-
