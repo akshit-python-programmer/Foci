@@ -499,6 +499,7 @@ def sanitize_event(raw_event):
 
 
 def get_coin_frame_surface():
+    global coin_sprite_sheet, coin_animation
     if not coin_sprite_sheet:
         return None
 
@@ -2751,7 +2752,7 @@ def simple_music_player_process(font_path):
 
 def run_music_player():
     """Starts a separate process for the music player window."""
-    if not AUDIO_AVAILABLE or not MUSIC_FILES:
+    if not MUSIC_FILES:
         return
     if any(p.name == "MusicPlayerProcess" for p in multiprocessing.active_children()):
         return
@@ -2971,7 +2972,7 @@ def toggle_checkbox_at_pos(pos, scroll_offset):
                     spawn_confetti(
                         checkbox_rect.centerx, checkbox_rect.centery
                     )
-                if settings.get("sounds_on") and DING_SOUND:
+                if AUDIO_AVAILABLE and settings.get("sounds_on") and DING_SOUND:
                     try:
                         DING_SOUND.play()
                     except Exception:
