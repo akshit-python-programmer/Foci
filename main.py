@@ -520,7 +520,7 @@ PLAYER_DATA_FILE = resource_path(os.path.join(ASSETS_DIR, "player_data.json"))
 
 
 def save_player_data():
-    write_json_file(PLAYER_DATA_FILE, {"coins": max(0, int(user_coins))})
+    write_json_file(PLAYER_DATA_FILE, {"coins": max(0, safe_int(user_coins, 0))})
 
 
 def sanitize_todos(items):
@@ -540,13 +540,16 @@ def sanitize_todos(items):
                 "children": sanitize_todos(item.get("children", [])),
             })
         else:
-            cleaned.append({
+            todo_item = {
                 "type": "todo",
                 "title": str(item.get("title") or "Untitled To-do"),
                 "done": bool(item.get("done", False)),
-                **({"tag": item["tag"]} if isinstance(item.get("tag"), str) else {}),
-                **({"date": item["date"]} if isinstance(item.get("date"), str) else {}),
-            })
+            }
+            if isinstance(item.get("tag"), str):
+                todo_item["tag"] = item["tag"]
+            if isinstance(item.get("date"), str):
+                todo_item["date"] = item["date"]
+            cleaned.append(todo_item)
     return cleaned
 
 
@@ -643,12 +646,17 @@ def load_events():
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 raw_events = json.load(f)
             if isinstance(raw_events, dict):
-                all_events = {
-                    date_key: [event for event in (sanitize_event(ev) for ev in date_events) if event is not None]
-                    if isinstance(date_events, list) else []
-                    for date_key, date_events in raw_events.items()
-                    if isinstance(date_key, str)
-                }
+                all_events = {}
+                for date_key, date_events in raw_events.items():
+                    if not isinstance(date_key, str):
+                        continue
+                    cleaned_events = []
+                    if isinstance(date_events, list):
+                        for raw_event in date_events:
+                            event = sanitize_event(raw_event)
+                            if event is not None:
+                                cleaned_events.append(event)
+                    all_events[date_key] = cleaned_events
             else:
                 all_events = {}
         except (json.JSONDecodeError, TypeError):
@@ -1662,10 +1670,11 @@ def draw_day_view(event_layout, dragging_event=None, is_dragging_over_todo=False
         # --- Display coins earned from each event ---
         coins_for_event = int(event.get("duration", 60) / 5)
         coin_frame = get_coin_frame_surface()
-        coin_icon_small = (
-            pygame.transform.smoothscale(coin_frame, (16, 16))
-            if coin_frame is not None else pygame.Surface((16, 16), pygame.SRCALPHA)
-        )
+        if coin_frame is not None:
+            coin_icon_small = pygame.transform.smoothscale(coin_frame, (16, 16))
+        else:
+            coin_icon_small = pygame.Surface((16, 16), pygame.SRCALPHA)
+            pygame.draw.circle(coin_icon_small, (255, 215, 0), (8, 8), 7)
         coin_val_text = get_font_wrapper(14).render(f"+{coins_for_event}", True, text_color)
         
         screen.blit(coin_icon_small, (event_rect.right - 12 - 10, event_y + event_height - 30))
