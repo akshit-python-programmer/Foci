@@ -2969,7 +2969,7 @@ def toggle_checkbox_at_pos(pos, scroll_offset):
                     spawn_confetti(
                         checkbox_rect.centerx, checkbox_rect.centery
                     )
-                if AUDIO_AVAILABLE and settings.get("sounds_on") and DING_SOUND:
+                if settings.get("sounds_on") and DING_SOUND:
                     try:
                         DING_SOUND.play()
                     except Exception:
