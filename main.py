@@ -397,7 +397,9 @@ settings = {
 
 
 def write_json_file(path, data, *, indent=2, ensure_ascii=True):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
     temp_path = f"{path}.tmp"
     with open(temp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
@@ -444,7 +446,7 @@ def sanitize_settings(loaded_settings):
         "theme": theme,
         "start_hour": start_hour,
         "end_hour": end_hour,
-        "sounds_on": bool(sanitized.get("sounds_on", settings["sounds_on"])) and AUDIO_AVAILABLE,
+        "sounds_on": bool(sanitized.get("sounds_on", settings["sounds_on"])),
         "hour_height": hour_height,
         "confetti_on": bool(sanitized.get("confetti_on", settings["confetti_on"])),
         "font_path": font_path,
@@ -565,7 +567,7 @@ def load_settings():
     else:
         settings = sanitize_settings({})
 
-    set_theme(settings.get("theme", current_theme))
+    set_theme(settings["theme"])
     START_HOUR = settings["start_hour"]
     END_HOUR = settings["end_hour"]
     HOUR_HEIGHT = settings["hour_height"]
@@ -675,7 +677,7 @@ def load_events():
     try:
         with open(PLAYER_DATA_FILE, "r", encoding="utf-8") as f:
             player_data = json.load(f)
-            user_coins = max(0, int(player_data.get("coins", 0)))
+            user_coins = max(0, safe_int(player_data.get("coins", 0), 0))
     except (FileNotFoundError, json.JSONDecodeError, TypeError, ValueError):
         user_coins = 0
 
@@ -2969,7 +2971,7 @@ def toggle_checkbox_at_pos(pos, scroll_offset):
                     spawn_confetti(
                         checkbox_rect.centerx, checkbox_rect.centery
                     )
-                if DING_SOUND:
+                if settings.get("sounds_on") and DING_SOUND:
                     try:
                         DING_SOUND.play()
                     except Exception:
