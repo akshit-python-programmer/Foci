@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Real-bug checks only: undefined names, syntax errors, unused imports, redefinitions.
+select = ["F", "E9"]
+ignore = [
+    "F403",  # `from utility import *` in main.py
+    "F405",
+    "F841",  # unused locals in the large GUI functions; tracked separately
+]
+
+[tool.ruff.lint.per-file-ignores]
+# ctypes.wintypes is imported inside a Windows-only try block
+"main.py" = ["F401"]

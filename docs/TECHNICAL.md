@@ -13,15 +13,18 @@ Foci is a single-process desktop app with one deliberate exception: the lofi mus
 ```
 main.py  (main process, 60 fps game loop)
 │
+├── foci_store.py       persistence + validation (pure Python, no pygame, unit-tested)
 ├── utility.py          helper functions (math, color, font cache, drawing primitives)
-├── google_calendar.py  optional OAuth2 calendar sync (self-contained)
+├── google_calendar.py  optional OAuth2 calendar sync (experimental, self-contained)
 ├── progress.py         standalone focus-timer demo
 │
 └── subprocess: simple_music_player_process()
         └── SMTCController  WinRT media-key / tray integration
 ```
 
-Data is stored in four plain JSON files in `assets/`. No database, no cloud, no framework.
+Data is stored in four plain JSON files. No database, no cloud, no framework.
+
+Bundled resources (fonts, icons, music) and user data are kept apart on purpose. `foci_store.app_root()` points at the read-only resources, which in a PyInstaller one-file build are unpacked to a temporary `sys._MEIPASS` folder that's deleted on exit. `foci_store.user_data_dir()` points at a writable per-user folder (`assets/` from source, the OS app-data folder when packaged, or `FOCI_DATA_DIR`). Every JSON write goes to a temp file first and then `os.replace()`s it, so a crash mid-save can't leave a half-written file.
 
 ---
 

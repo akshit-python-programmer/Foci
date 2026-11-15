@@ -1,7 +1,5 @@
 # docs
 
-Put screenshots and demo media here.
+- [TECHNICAL.md](TECHNICAL.md): architecture and engineering notes.
 
-The main README references `docs/demo.png` — drop a screenshot or short GIF of Foci
-(e.g. dragging an event onto the timeline and checking off a task) at that path to make
-the repo's landing page pop.
+Screenshots and demo GIFs used by the main README live in [`../demo`](../demo).

@@ -6,8 +6,6 @@ import pygame
 import sys
 import math
 import random
-from pygame import gfxdraw
-from datetime import timedelta
 
 pygame.init()
 
@@ -184,8 +182,7 @@ def draw_center_glass(surface, radius):
 
 
 def format_time(seconds):
-    td = timedelta(seconds=int(max(0, seconds)))
-    m, s = divmod(td.seconds, 60)
+    m, s = divmod(int(max(0, seconds)), 60)
     return f"{m:02d}:{s:02d}"
 
 
