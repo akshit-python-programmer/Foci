@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 
 import pytest
 
@@ -244,3 +245,45 @@ def test_safe_int():
     assert store.safe_int("7", 0) == 7
     assert store.safe_int(None, 3) == 3
     assert store.safe_int("x", 3) == 3
+
+
+# --- paths ------------------------------------------------------------------
+
+def test_data_dir_env_override(tmp_path):
+    assert store.user_data_dir({"FOCI_DATA_DIR": str(tmp_path)}) == str(tmp_path)
+
+
+def test_data_dir_from_source_is_assets(monkeypatch):
+    monkeypatch.delattr("sys._MEIPASS", raising=False)
+    monkeypatch.setattr("sys.frozen", False, raising=False)
+    assert store.user_data_dir({}) == os.path.join(store.app_root(), "assets")
+
+
+def test_frozen_build_never_writes_into_bundle(monkeypatch, tmp_path):
+    # Regression: the one-file .exe saved user data inside its temp extraction
+    # folder (sys._MEIPASS), which PyInstaller deletes when the app exits.
+    bundle = tmp_path / "_MEI12345"
+    monkeypatch.setattr("sys._MEIPASS", str(bundle), raising=False)
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    data_dir = store.user_data_dir({"APPDATA": str(tmp_path / "Roaming")})
+    assert store.app_root() == str(bundle)
+    assert not data_dir.startswith(str(bundle))
+
+
+@pytest.mark.parametrize(
+    "platform, environ, expected_tail",
+    [
+        ("win32", {"APPDATA": "/r"}, os.path.join("/r", "Foci")),
+        ("darwin", {}, os.path.join("Library", "Application Support", "Foci")),
+        ("linux", {"XDG_DATA_HOME": "/x"}, os.path.join("/x", "Foci")),
+        ("linux", {}, os.path.join(".local", "share", "Foci")),
+    ],
+)
+def test_platform_data_dir(platform, environ, expected_tail):
+    assert store.platform_data_dir(platform=platform, environ=environ).endswith(expected_tail)
+
+
+def test_app_root_does_not_depend_on_cwd(monkeypatch, tmp_path):
+    monkeypatch.delattr("sys._MEIPASS", raising=False)
+    monkeypatch.chdir(tmp_path)
+    assert os.path.isfile(os.path.join(store.app_root(), "main.py"))

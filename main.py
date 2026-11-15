@@ -47,7 +47,9 @@ except Exception as e:
 
 lofi_on = False
 
-ASSETS_DIR = resource_path("assets")
+ASSETS_DIR = resource_path("assets")  # bundled, read-only resources
+# Writable user data. Must NOT be the PyInstaller temp dir, which is wiped on exit.
+DATA_DIR = foci_store.user_data_dir()
 DEFAULT_FONT_PATH = os.path.join(ASSETS_DIR, "Domine.ttf")
 
 try:
@@ -394,7 +396,7 @@ def set_theme(name):
 
 set_theme(current_theme)
 
-SETTINGS_FILE = f"{ASSETS_DIR}/settings.json"
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 
 # Default settings
 DEFAULT_SETTINGS = {
@@ -452,7 +454,7 @@ def get_coin_frame_surface():
     return coin_sprite_sheet.subsurface(frame_rect)
 
 
-PLAYER_DATA_FILE = resource_path(os.path.join(ASSETS_DIR, "player_data.json"))
+PLAYER_DATA_FILE = os.path.join(DATA_DIR, "player_data.json")
 
 
 def save_player_data():
@@ -473,8 +475,8 @@ def save_settings():
     write_json_file(SETTINGS_FILE, settings)
 
 
-DATA_FILE = resource_path(os.path.join(ASSETS_DIR, "events.json"))
-TODO_FILE = resource_path(os.path.join(ASSETS_DIR, "todos.json"))
+DATA_FILE = os.path.join(DATA_DIR, "events.json")
+TODO_FILE = os.path.join(DATA_DIR, "todos.json")
 all_events = {}
 events = []
 todos = []
@@ -5425,6 +5427,8 @@ def main_loop():
 
 
 if __name__ == "__main__":
+    # Required for the lofi player subprocess in PyInstaller builds; no-op otherwise.
+    multiprocessing.freeze_support()
     dragging_divider = False
     # This is important for multiprocessing to work correctly on all platforms
     main_loop()

@@ -5,15 +5,14 @@ import datetime
 import math
 import time
 import random
+
+from foci_store import app_root
+
 # --- Path & Resource Helpers ---
 
 def resource_path(relative_path):
-    """Get absolute path to resource (works for dev and .exe)"""
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+    """Absolute path to a bundled resource (works from source and from the .exe)."""
+    return os.path.join(app_root(), relative_path)
 
 def load_icon_safe(name, size=(28, 28)):
     """Loads an image with a fallback to a blank surface."""

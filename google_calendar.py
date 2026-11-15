@@ -11,16 +11,12 @@ from googleapiclient.errors import HttpError
 # If modifying these scopes, delete token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
-def resource_path(relative_path):
-    """Get absolute path to resource (works for dev and .exe)"""
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+from foci_store import user_data_dir
 
-CREDENTIALS_FILE = resource_path(os.path.join("assets", "credentials.json"))
-TOKEN_FILE = resource_path(os.path.join("assets", "token.json"))
+# Both files are per-user secrets, so they live in the writable data directory
+# (assets/ when running from source) rather than inside the bundled app.
+CREDENTIALS_FILE = os.path.join(user_data_dir(), "credentials.json")
+TOKEN_FILE = os.path.join(user_data_dir(), "token.json")
 
 
 def get_service():
@@ -56,6 +52,7 @@ def get_service():
                 print(f"An error occurred during authentication: {e}")
                 return None
         # Save the credentials for the next run
+        os.makedirs(os.path.dirname(TOKEN_FILE), exist_ok=True)
         with open(TOKEN_FILE, "w") as token:
             token.write(creds.to_json())
 
