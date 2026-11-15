@@ -6,13 +6,25 @@ import datetime
 import os
 import random
 import glob
-import json
 import time
 import multiprocessing
 from multiprocessing import Queue
 from pygame import gfxdraw
 import math
 from utility import * # Import all helper functions
+import foci_store
+from foci_store import (
+    read_json_file,
+    roll_todo_tags,
+    safe_int,
+    sanitize_events_by_date,
+    sanitize_todos,
+    schedule_todo,
+    write_json_file,
+    has_completed_todos,
+    remove_completed_todos,
+    todo_tag_label,
+)
 pygame.mixer.pre_init(44100, -16, 2, 2048) # Ensure high quality audio
 pygame.init()
 AUDIO_AVAILABLE = True
@@ -385,7 +397,7 @@ set_theme(current_theme)
 SETTINGS_FILE = f"{ASSETS_DIR}/settings.json"
 
 # Default settings
-settings = {
+DEFAULT_SETTINGS = {
     "theme": "Serene Morning",
     "start_hour": 5,
     "end_hour": 23,
@@ -394,23 +406,7 @@ settings = {
     "confetti_on": True,
     "font_path": DEFAULT_FONT_PATH,
 }
-
-
-def write_json_file(path, data, *, indent=2, ensure_ascii=True):
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    temp_path = f"{path}.tmp"
-    with open(temp_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
-    os.replace(temp_path, path)
-
-
-def safe_int(value, default):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
+settings = dict(DEFAULT_SETTINGS)
 
 
 def normalize_font_path(font_path):
@@ -426,76 +422,13 @@ def normalize_font_path(font_path):
 
 
 def sanitize_settings(loaded_settings):
-    sanitized = settings.copy()
-    if isinstance(loaded_settings, dict):
-        sanitized.update(loaded_settings)
-
-    theme = sanitized.get("theme")
-    if theme not in THEMES:
-        theme = settings["theme"]
-
-    start_hour = clamp(safe_int(sanitized.get("start_hour"), settings["start_hour"]), 0, 12)
-    end_hour = clamp(safe_int(sanitized.get("end_hour"), settings["end_hour"]), 13, 23)
-    if end_hour <= start_hour:
-        start_hour, end_hour = settings["start_hour"], settings["end_hour"]
-
-    hour_height = clamp(safe_int(sanitized.get("hour_height"), settings["hour_height"]), 30, 80)
-    font_path = normalize_font_path(sanitized.get("font_path"))
-
-    return {
-        "theme": theme,
-        "start_hour": start_hour,
-        "end_hour": end_hour,
-        "sounds_on": bool(sanitized.get("sounds_on", settings["sounds_on"])),
-        "hour_height": hour_height,
-        "confetti_on": bool(sanitized.get("confetti_on", settings["confetti_on"])),
-        "font_path": font_path,
-    }
+    return foci_store.sanitize_settings(
+        loaded_settings, DEFAULT_SETTINGS, THEMES, resolve_font=normalize_font_path
+    )
 
 
 def sanitize_event(raw_event):
-    if not isinstance(raw_event, dict):
-        return None
-
-    event = dict(raw_event)
-    event["title"] = str(event.get("title") or "Untitled")
-
-    try:
-        event["hour"] = clamp(int(event.get("hour", START_HOUR)), 0, 23)
-    except (TypeError, ValueError):
-        event["hour"] = START_HOUR
-
-    try:
-        event["minute"] = clamp(int(event.get("minute", 0)), 0, 59)
-    except (TypeError, ValueError):
-        event["minute"] = 0
-
-    try:
-        event["duration"] = clamp(int(event.get("duration", 60)), 15, 24 * 60)
-    except (TypeError, ValueError):
-        event["duration"] = 60
-
-    event["done"] = bool(event.get("done", False))
-
-    color = event.get("color")
-    if not (
-        isinstance(color, (list, tuple))
-        and len(color) == 3
-        and all(isinstance(c, int) and 0 <= c <= 255 for c in color)
-    ):
-        color = [181, 234, 215]
-    event["color"] = list(color)
-
-    try:
-        event["icon"] = max(0, int(event.get("icon", 0)))
-    except (TypeError, ValueError):
-        event["icon"] = 0
-
-    google_id = event.get("google_id")
-    if google_id is not None and not isinstance(google_id, str):
-        event.pop("google_id", None)
-
-    return event
+    return foci_store.sanitize_event(raw_event, default_hour=START_HOUR)
 
 
 def get_coin_frame_surface():
@@ -526,45 +459,9 @@ def save_player_data():
     write_json_file(PLAYER_DATA_FILE, {"coins": max(0, safe_int(user_coins, 0))})
 
 
-def sanitize_todos(items):
-    if not isinstance(items, list):
-        return []
-
-    cleaned = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        item_type = item.get("type")
-        if item_type == "folder":
-            cleaned.append({
-                "type": "folder",
-                "name": str(item.get("name") or "Untitled Folder"),
-                "is_open": bool(item.get("is_open", False)),
-                "children": sanitize_todos(item.get("children", [])),
-            })
-        else:
-            todo_item = {
-                "type": "todo",
-                "title": str(item.get("title") or "Untitled To-do"),
-                "done": bool(item.get("done", False)),
-            }
-            if isinstance(item.get("tag"), str):
-                todo_item["tag"] = item["tag"]
-            if isinstance(item.get("date"), str):
-                todo_item["date"] = item["date"]
-            cleaned.append(todo_item)
-    return cleaned
-
-
 def load_settings():
     global settings, START_HOUR, END_HOUR, current_theme, HOUR_HEIGHT
-    settings = sanitize_settings({})
-    if os.path.exists(SETTINGS_FILE):
-        try:
-            with open(SETTINGS_FILE, "r") as f:
-                settings = sanitize_settings(json.load(f))
-        except (json.JSONDecodeError, TypeError, ValueError):
-            print("Warning: Could not read settings.json. Using defaults.")
+    settings = sanitize_settings(read_json_file(SETTINGS_FILE, {}))
 
     set_theme(settings["theme"])
     START_HOUR = settings["start_hour"]
@@ -603,35 +500,9 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 def load_todos():
     global todos
-    if os.path.exists(TODO_FILE):
-        try:
-            with open(TODO_FILE, "r", encoding="utf-8") as f:
-                todos = sanitize_todos(json.load(f))
-        except (json.JSONDecodeError, TypeError):
-            todos = []
-    else:
-        todos = []
-
-    # Update tags for items scheduled on previous days
-    today = datetime.date.today()
-    for todo in todos:
-        if todo.get("tag") == "today" and "date" in todo:
-            try:
-                todo_date = datetime.datetime.strptime(todo["date"], "%Y-%m-%d").date()
-                if todo_date < today:
-                    todo["tag"] = f"on {todo_date.strftime('%a')}"
-            except (ValueError, TypeError):
-                continue  # Ignore if date is malformed
-        elif todo.get("tag") == "tmr" and "date" in todo:
-            try:
-                todo_date = datetime.datetime.strptime(todo["date"], "%Y-%m-%d").date()
-                if todo_date < today:
-                    todo["tag"] = f"on {todo_date.strftime('%a')}"
-            except (ValueError, TypeError):
-                continue  # Ignore if date is malformed
-
-            if todo_date == today:
-                todo["tag"] = "today"
+    todos = sanitize_todos(read_json_file(TODO_FILE, []))
+    # Roll "today"/"tmr" tags forward (including to-dos nested in folders)
+    roll_todo_tags(todos)
 
 
 def save_todos():
@@ -642,30 +513,10 @@ def save_todos():
 
 def load_events():
     global all_events, events, user_coins
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                raw_events = json.load(f)
-            if isinstance(raw_events, dict):
-                all_events = {}
-                for date_key, date_events in raw_events.items():
-                    if not isinstance(date_key, str):
-                        continue
-                    cleaned_events = []
-                    if isinstance(date_events, list):
-                        for raw_event in date_events:
-                            event = sanitize_event(raw_event)
-                            if event is not None:
-                                cleaned_events.append(event)
-                    all_events[date_key] = cleaned_events
-            else:
-                all_events = {}
-        except (json.JSONDecodeError, TypeError):
-            print("Warning: Could not read events.json. Starting with empty events.")
-            all_events = {}
-    else:
-        all_events = {}
-    
+    all_events = sanitize_events_by_date(
+        read_json_file(DATA_FILE, {}), default_hour=START_HOUR
+    )
+
     date_str = selected_date.strftime("%Y-%m-%d")
     events.clear()
 
@@ -673,12 +524,10 @@ def load_events():
         events.extend(all_events[date_str])
     
     # Load coins from a separate simple file
-    try:
-        with open(PLAYER_DATA_FILE, "r", encoding="utf-8") as f:
-            player_data = json.load(f)
-            user_coins = max(0, safe_int(player_data.get("coins", 0), 0))
-    except (FileNotFoundError, json.JSONDecodeError, TypeError, ValueError):
-        user_coins = 0
+    player_data = read_json_file(PLAYER_DATA_FILE, {})
+    if not isinstance(player_data, dict):
+        player_data = {}
+    user_coins = max(0, safe_int(player_data.get("coins", 0), 0))
 
 
 def load_coin_animation():
@@ -1024,6 +873,24 @@ def draw_todo_items_recursive(items, y, level, mouse_pos, dragging_index_path, s
             text_color = (150, 150, 150) if is_done else THEME["text"]
             
             max_text_width = item_rect.width - (text_x - item_rect.x) - 35
+
+            # Date tag pill ("Today", "Tomorrow", "on Mon"), right-aligned;
+            # hidden while hovered so it doesn't sit under the delete button.
+            tag_info = todo_tag_label(item)
+            if tag_info and not is_hovered:
+                tag_label, is_overdue = tag_info
+                font11 = get_font_wrapper(11)
+                if is_overdue:
+                    pill_bg, pill_fg = (255, 214, 214), (150, 40, 40)
+                else:
+                    pill_bg, pill_fg = THEME["button_bg"], THEME["text"]
+                tag_surf = font11.render(tag_label, True, pill_fg)
+                pill = pygame.Rect(0, 0, tag_surf.get_width() + 12, tag_surf.get_height() + 4)
+                pill.midright = (item_rect.right - 8, item_rect.centery)
+                pygame.draw.rect(screen, pill_bg, pill, border_radius=pill.height // 2)
+                screen.blit(tag_surf, tag_surf.get_rect(center=pill.center))
+                max_text_width = max(20, pill.left - 6 - text_x)
+
             display_title = truncate_text(item.get("title", "Untitled To-do"), font16, max_text_width)
 
             if is_done:
@@ -1091,7 +958,7 @@ def draw_todo_list(
 
     # --- Delete Completed Button ---
     delete_completed_btn = pygame.Rect(add_btn.right + 10, add_btn.y, 40, 40)
-    has_completed = any(t.get("done") for t in todos)
+    has_completed = has_completed_todos(todos)
     if has_completed:
         del_base_color = (255, 180, 180)
         del_hover_color = (255, 200, 200)
@@ -3132,23 +2999,7 @@ def show_todo_context_menu(todo_index, pos, scroll_offset=0):
                 for i, rect in enumerate(option_rects):
                     if rect.collidepoint(mx, my):
                         todo = todos[todo_index]
-                        if i == 0:  # Today
-                            # Add the "today" tag as requested
-                            todo["date"] = datetime.date.today().strftime("%Y-%m-%d")
-                            todo["tag"] = "today"
-                        elif i == 1:  # Tomorrow
-                            todo["date"] = (
-                                datetime.date.today() + datetime.timedelta(days=1)
-                            ).strftime("%Y-%m-%d")
-                            todo["tag"] = "tmr"
-                            if "tag" in todo:
-                                del todo["tag"]
-                        elif i == 2:  # Someday
-                            if "date" in todo:
-                                del todo["date"]
-                            if "tag" in todo:
-                                # Remove all tags as requested
-                                del todo["tag"]
+                        schedule_todo(todo, ("today", "tomorrow", "someday")[i])
                         save_todos()
                         return
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
@@ -5129,9 +4980,9 @@ def main_loop():
                             save_todos()
                         continue
                     if todo_btns and todo_btns["delete_completed_btn"].collidepoint(pe.pos):
-                        if any(t.get("done") for t in todos):
+                        if has_completed_todos(todos):
                             if show_confirmation_dialog("Delete all completed tasks?"):
-                                todos = [t for t in todos if not t.get("done")]
+                                todos = remove_completed_todos(todos)
                                 save_todos()
                         continue
 
