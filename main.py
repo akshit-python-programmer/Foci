@@ -3506,6 +3506,10 @@ def event_add_window(pos=None, edit_event=None):
         content_clip_rect = pygame.Rect(win_x, win_y  + 80, win_w, win_h - 150)
         screen.set_clip(content_clip_rect)
 
+        # Layout cursor for this frame; must match y_pos in the click handler above.
+        # (It was never initialised, so opening this dialog raised UnboundLocalError.)
+        y_offset = win_y + 90
+
         # --- Date Selection ---
         date_label_surf = font_label.render("Date", True, LABEL_COLOR) # noqa
         date_label_surf.set_alpha(content_alpha)
@@ -5329,7 +5333,7 @@ def main_loop():
 
             elif pe.type == pygame.KEYDOWN:
                 if pe.key == pygame.K_s:
-                    show_stats_popup(events, screen , font_cache , font_path , WIDTH , HEIGHT)
+                    show_stats_popup(events, screen, font_cache, settings.get("font_path"), WIDTH, HEIGHT)
                 elif pe.key == pygame.K_t:
                     keys = list(THEMES.keys())
                     idx = keys.index(current_theme)
