@@ -23,6 +23,11 @@ from foci_store import (
     has_completed_todos,
     remove_completed_todos,
     todo_tag_label,
+    visible_todo_paths,
+    get_todo_at,
+    remove_todo_at,
+    move_selection,
+    clamp_selection,
 )
 pygame.mixer.pre_init(44100, -16, 2, 2048) # Ensure high quality audio
 pygame.init()
@@ -379,6 +384,79 @@ THEMES = {
             (255, 240, 245), # Lavender Blush
             (219, 112, 147), # Pale Violet Red
             (255, 192, 203), # Pink
+        ],
+    },
+    "Ocean Breeze": {
+        "background": (236, 248, 250),  # Sea-foam white
+        "text": (30, 60, 75),
+        "event_done_color": (190, 225, 215),
+        "event_dimmed": (205, 225, 232),
+        "hour_line": (190, 215, 225),
+        "title_color": (0, 119, 145),  # Deep teal
+        "progress_bar": (0, 150, 170),
+        "current_event_dim": (150, 210, 225),
+        "settings_bg": (245, 252, 253),
+        "todo_bg": (214, 236, 242),
+        "todo_item_bg": (238, 248, 251),
+        "todo_item_hover": (226, 242, 247),
+        "button_bg": (200, 228, 236),
+        "gradient_start": (178, 235, 242),  # Light aqua
+        "gradient_end": (204, 229, 255),  # Pale sky
+        "use_gradient_bg": True,
+        "color_choices": [
+            (128, 203, 196),  # Seafoam
+            (144, 202, 249),  # Sky
+            (255, 224, 178),  # Sand
+            (179, 229, 252),  # Shallow water
+            (248, 187, 208),  # Coral pink
+        ],
+    },
+    "Lavender Dusk": {
+        "background": (36, 30, 52),  # Deep violet
+        "text": (230, 222, 245),
+        "event_done_color": (60, 70, 70),
+        "event_dimmed": (62, 54, 82),
+        "hour_line": (70, 60, 95),
+        "title_color": (200, 180, 255),
+        "progress_bar": (167, 139, 250),
+        "current_event_dim": (130, 110, 190),
+        "settings_bg": (44, 37, 63),
+        "todo_bg": (40, 33, 58),
+        "todo_item_bg": (54, 46, 78),
+        "todo_item_hover": (66, 57, 94),
+        "button_bg": (70, 60, 100),
+        "gradient_start": (45, 35, 70),  # Twilight
+        "gradient_end": (70, 45, 85),  # Plum
+        "use_gradient_bg": True,
+        "color_choices": [
+            (167, 139, 250),  # Lavender
+            (244, 143, 177),  # Rose
+            (128, 222, 234),  # Cyan glow
+            (255, 204, 128),  # Lamp light
+            (129, 199, 132),  # Sage
+        ],
+    },
+    "Matcha Latte": {
+        "background": (246, 243, 232),  # Warm cream
+        "text": (60, 66, 46),
+        "event_done_color": (200, 220, 180),
+        "event_dimmed": (226, 224, 210),
+        "hour_line": (222, 216, 196),
+        "title_color": (96, 128, 56),  # Matcha green
+        "progress_bar": (124, 160, 82),
+        "current_event_dim": (190, 210, 160),
+        "settings_bg": (250, 248, 240),
+        "todo_bg": (232, 230, 212),
+        "todo_item_bg": (247, 245, 236),
+        "todo_item_hover": (238, 236, 222),
+        "button_bg": (220, 226, 196),
+        "use_gradient_bg": False,
+        "color_choices": [
+            (174, 203, 132),  # Matcha
+            (222, 196, 160),  # Latte
+            (240, 214, 170),  # Oat
+            (196, 220, 190),  # Mint
+            (232, 190, 172),  # Hojicha
         ],
     },
     }
@@ -807,7 +885,7 @@ def get_parent_folder_name(path_str, items):
 
 
 
-def draw_todo_items_recursive(items, y, level, mouse_pos, dragging_index_path, scroll_offset):
+def draw_todo_items_recursive(items, y, level, mouse_pos, dragging_index_path, scroll_offset, path_prefix=()):
     """
     Recursively draws to-do items and folders, handling indentation and open/closed states.
     Returns the new y-coordinate after drawing.
@@ -828,8 +906,12 @@ def draw_todo_items_recursive(items, y, level, mouse_pos, dragging_index_path, s
         # Pygame's set_clip handles rendering optimizations anyway
 
         is_hovered = item_rect.collidepoint(mouse_pos)
-        bg_color = THEME["todo_item_hover"] if is_hovered else THEME["todo_item_bg"]
+        is_selected = (path_prefix + (i,)) == selected_todo_path
+        bg_color = THEME["todo_item_hover"] if (is_hovered or is_selected) else THEME["todo_item_bg"]
         pygame.draw.rect(screen, bg_color, item_rect, border_radius=8)
+        if is_selected:
+            # Keyboard-selection ring
+            pygame.draw.rect(screen, THEME["progress_bar"], item_rect, 2, border_radius=8)
 
         is_folder = item.get("type") == "folder"
         
@@ -911,7 +993,10 @@ def draw_todo_items_recursive(items, y, level, mouse_pos, dragging_index_path, s
         # If folder is open, recurse
         if is_folder and item.get("is_open"):
             children = item.get("children", [])
-            current_y = draw_todo_items_recursive(children, current_y, level + 1, mouse_pos, dragging_index_path, scroll_offset)
+            current_y = draw_todo_items_recursive(
+                children, current_y, level + 1, mouse_pos, dragging_index_path, scroll_offset,
+                path_prefix + (i,),
+            )
 
     return current_y
 
@@ -2902,6 +2987,167 @@ def find_item_at_pos_recursive(items, pos, y, level, scroll_offset, path_str=Non
             return find_item_at_pos_recursive(item.get("children", []), (-1,-1), 0, level + 1, 0, path_str=path_parts[1])
     return None, None, None
 
+def toggle_todo_done(item):
+    """Check or uncheck a to-do (and any event created from it), then save."""
+    item["done"] = not item.get("done", False)
+    if "id" in item:
+        for event_list in all_events.values():
+            for ev in event_list:
+                if ev.get("todo_id") == item["id"]:
+                    ev["done"] = item["done"]
+    if item["done"]:
+        trigger_motivational_quote(active_quotes, WIDTH, HEIGHT, get_font_wrapper(22))
+    save_todos()
+
+
+# --- Keyboard shortcuts -------------------------------------------------------
+
+selected_todo_path = None  # path tuple of the to-do highlighted with the keyboard
+
+SHORTCUTS = [
+    ("To-dos", [
+        ("Up / Down  or  K / J", "Select previous / next to-do"),
+        ("Space  or  Enter", "Check off to-do  /  open or close folder"),
+        ("1   2   3", "Schedule for Today / Tomorrow / Someday"),
+        ("N", "New to-do"),
+        ("Delete", "Delete selected to-do"),
+        ("Esc", "Clear selection"),
+    ]),
+    ("Calendar", [
+        ("Left / Right", "Previous / next day (week in weekly view)"),
+        ("Home", "Jump to today"),
+        ("W", "Toggle weekly view"),
+    ]),
+    ("App", [
+        ("S", "Today's stats"),
+        ("T", "Next theme"),
+        ("?  or  H", "Show this help"),
+    ]),
+]
+
+
+def scroll_todo_into_view(path):
+    """Adjust the to-do scroll offset so the keyboard-selected row is visible."""
+    global todo_scroll_offset
+    paths = visible_todo_paths(todos)
+    if path not in paths:
+        return
+    row_top = paths.index(path) * 50
+    widget_space = 190 if get_current_event() else 0
+    visible_height = (HEIGHT - 70 - widget_space - 50) - 70
+    if row_top < todo_scroll_offset:
+        todo_scroll_offset = row_top
+    elif row_top + 44 > todo_scroll_offset + visible_height:
+        todo_scroll_offset = row_top + 44 - visible_height
+
+
+def handle_todo_shortcut(key):
+    """Handle a to-do keyboard shortcut. Returns True if the key was used."""
+    global selected_todo_path, todos
+
+    if key in (pygame.K_DOWN, pygame.K_j, pygame.K_UP, pygame.K_k):
+        delta = 1 if key in (pygame.K_DOWN, pygame.K_j) else -1
+        selected_todo_path = move_selection(todos, selected_todo_path, delta)
+        if selected_todo_path:
+            scroll_todo_into_view(selected_todo_path)
+        return True
+
+    if key == pygame.K_n:
+        new_todo_details = todo_add_window_v2()
+        if new_todo_details:
+            todos.append(new_todo_details)
+            save_todos()
+            selected_todo_path = (len(todos) - 1,)
+            scroll_todo_into_view(selected_todo_path)
+        return True
+
+    if key == pygame.K_ESCAPE:
+        selected_todo_path = None
+        return True
+
+    item = get_todo_at(todos, selected_todo_path)
+    if item is None:
+        selected_todo_path = None
+        return False
+
+    is_folder = item.get("type") == "folder"
+    if key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_KP_ENTER):
+        if is_folder:
+            item["is_open"] = not item.get("is_open", False)
+            save_todos()
+        else:
+            toggle_todo_done(item)
+        return True
+
+    schedule_keys = {pygame.K_1: "today", pygame.K_2: "tomorrow", pygame.K_3: "someday"}
+    if key in schedule_keys and not is_folder:
+        schedule_todo(item, schedule_keys[key])
+        save_todos()
+        return True
+
+    if key in (pygame.K_DELETE, pygame.K_BACKSPACE):
+        name = item.get("name") if is_folder else item.get("title")
+        if not is_folder or show_confirmation_dialog(f"Delete '{name}'?"):
+            remove_todo_at(todos, selected_todo_path)
+            save_todos()
+            selected_todo_path = clamp_selection(todos, selected_todo_path)
+        return True
+
+    return False
+
+
+def show_shortcuts_help():
+    """Modal overlay listing every keyboard shortcut. Any key or click closes it."""
+    background = screen.copy()
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 150))
+    title_font = get_font_wrapper(26)
+    section_font = get_font_wrapper(17)
+    key_font = get_font_wrapper(15)
+    row_h, gap = 26, 14
+    rows = sum(len(items) for _, items in SHORTCUTS)
+    win_w = min(600, WIDTH - 40)
+    win_h = 70 + len(SHORTCUTS) * (section_font.get_height() + gap) + rows * row_h + 50
+    win = pygame.Rect(0, 0, win_w, win_h)
+    win.center = (WIDTH // 2, HEIGHT // 2)
+    clock = pygame.time.Clock()
+
+    while True:
+        screen.blit(background, (0, 0))
+        screen.blit(overlay, (0, 0))
+        pygame.draw.rect(screen, THEME["settings_bg"], win, border_radius=18)
+        pygame.draw.rect(screen, THEME["hour_line"], win, 1, border_radius=18)
+
+        title = title_font.render("Keyboard shortcuts", True, THEME["text"])
+        screen.blit(title, (win.centerx - title.get_width() // 2, win.y + 20))
+        y = win.y + 70
+        for section, items in SHORTCUTS:
+            label = section_font.render(section, True, THEME["title_color"])
+            screen.blit(label, (win.x + 30, y))
+            y += label.get_height() + 6
+            for keys, action in items:
+                key_surf = key_font.render(keys, True, THEME["text"])
+                pill = pygame.Rect(win.x + 30, y, key_surf.get_width() + 14, row_h - 4)
+                pygame.draw.rect(screen, THEME["button_bg"], pill, border_radius=6)
+                screen.blit(key_surf, key_surf.get_rect(center=pill.center))
+                action_surf = key_font.render(action, True, THEME["text"])
+                screen.blit(action_surf, (win.x + 230, y + (row_h - 4 - action_surf.get_height()) // 2))
+                y += row_h
+            y += gap - 6
+
+        hint = key_font.render("Press any key to close", True, THEME["title_color"])
+        screen.blit(hint, (win.centerx - hint.get_width() // 2, win.bottom - 32))
+        pygame.display.flip()
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                return
+        clock.tick(60)
+
+
 def check_or_delete_todo_at_pos(pos, scroll_offset=0):
     """Checks for clicks on a todo's checkbox or delete button."""
     x, my = pos
@@ -2936,15 +3182,7 @@ def check_or_delete_todo_at_pos(pos, scroll_offset=0):
         # It's a to-do, check for checkbox click
         checkbox_rect = pygame.Rect(item_rect.x + 8, item_rect.centery - CHECKBOX_SIZE // 2, CHECKBOX_SIZE, CHECKBOX_SIZE)
         if checkbox_rect.collidepoint(x, my):
-            item["done"] = not item.get("done", False)
-            if "id" in item:
-                for event_list in all_events.values():
-                    for ev in event_list:
-                        if ev.get("todo_id") == item["id"]:
-                            ev["done"] = item["done"]
-            if item["done"]:
-                trigger_motivational_quote(active_quotes, WIDTH, HEIGHT, get_font_wrapper(22))
-            save_todos()
+            toggle_todo_done(item)
             return True
 
     return False
@@ -3505,6 +3743,10 @@ def event_add_window(pos=None, edit_event=None):
         # --- Clipping area for scrollable content ---
         content_clip_rect = pygame.Rect(win_x, win_y  + 80, win_w, win_h - 150)
         screen.set_clip(content_clip_rect)
+
+        # Layout cursor for this frame; must match y_pos in the click handler above.
+        # (It was never initialised, so opening this dialog raised UnboundLocalError.)
+        y_offset = win_y + 90
 
         # --- Date Selection ---
         date_label_surf = font_label.render("Date", True, LABEL_COLOR) # noqa
@@ -4833,6 +5075,18 @@ def main_loop():
                             load_events()
                             weekly_view = False
                             break
+                elif pe.type == pygame.KEYDOWN:
+                    if pe.key in (pygame.K_w, pygame.K_ESCAPE):
+                        weekly_view = False
+                    elif pe.key == pygame.K_LEFT:
+                        current_week_start -= datetime.timedelta(weeks=1)
+                    elif pe.key == pygame.K_RIGHT:
+                        current_week_start += datetime.timedelta(weeks=1)
+                    elif pe.key == pygame.K_HOME:
+                        today = datetime.date.today()
+                        current_week_start = today - datetime.timedelta(days=today.weekday())
+                    elif pe.key == pygame.K_h or pe.unicode == "?":
+                        show_shortcuts_help()
             clock.tick(60)
             continue
 
@@ -5328,16 +5582,28 @@ def main_loop():
                     resizing_event["duration"] = int(new_minutes)
 
             elif pe.type == pygame.KEYDOWN:
+                if handle_todo_shortcut(pe.key):
+                    continue
                 if pe.key == pygame.K_s:
-                    show_stats_popup(events, screen , font_cache , font_path , WIDTH , HEIGHT)
+                    # (used to pass an undefined `font_path` and crash the app)
+                    show_stats_popup(events, screen, font_cache, settings.get("font_path"), WIDTH, HEIGHT)
                 elif pe.key == pygame.K_t:
                     keys = list(THEMES.keys())
                     idx = keys.index(current_theme)
                     set_theme(keys[(idx + 1) % len(keys)])
-                elif pe.key == pygame.K_c:
-                    curr = get_current_event()
-                    # if curr: 
-                        # run_green_ring_focus_timer(curr)
+                    settings["theme"] = keys[(idx + 1) % len(keys)]
+                    save_settings()
+                elif pe.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                    selected_date += datetime.timedelta(days=-1 if pe.key == pygame.K_LEFT else 1)
+                    load_events()
+                elif pe.key == pygame.K_HOME:
+                    selected_date = datetime.date.today()
+                    load_events()
+                elif pe.key == pygame.K_w:
+                    weekly_view = True
+                    current_week_start = selected_date - datetime.timedelta(days=selected_date.weekday())
+                elif pe.key == pygame.K_h or pe.unicode == "?":
+                    show_shortcuts_help()
 
         # --- Update and Draw Animations ---
         current_time = time.time()
