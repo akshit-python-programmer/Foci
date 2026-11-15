@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an idea for Foci
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this help you do?
+      description: Describe the situation or frustration, not just the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+    validations:
+      required: true
+  - type: textarea
+    id: calm
+    attributes:
+      label: How does it keep Foci calm?
+      description: Foci tries to avoid noisy, guilt-inducing UI. Any thoughts on how this fits?

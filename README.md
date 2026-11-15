@@ -6,6 +6,8 @@
 ![pygame](https://img.shields.io/badge/Built%20with-pygame-44cc11)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![CI](https://github.com/akshit-python-programmer/Foci/actions/workflows/ci.yml/badge.svg)](https://github.com/akshit-python-programmer/Foci/actions/workflows/ci.yml)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](CONTRIBUTING.md)
 
 <div align="center">
   <a href="docs/TECHNICAL.md">
@@ -62,21 +64,30 @@ To try just the standalone focus timer:
 python progress.py
 ```
 
+### Run the tests
+
+```bash
+pip install pytest
+pytest -q
+```
+
 ### Build a standalone .exe
 
 ```bash
 pip install pyinstaller
 pyinstaller main.spec
-# output in dist/
+# output: dist/Foci.exe
 ```
 
 ### Optional: Google Calendar sync
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create an OAuth 2.0 Desktop client and enable the Calendar API.
-2. Download `credentials.json` → place in `assets/`.
-3. First run opens a browser to authorize; token stored locally as `assets/token.json`.
+2. Download `credentials.json` → place it in your [data folder](#your-data) (`assets/` when running from source).
+3. First run opens a browser to authorize; the token is stored next to it as `token.json`.
 
 Both files are git-ignored and must never be committed.
+
+> **Status: experimental.** `google_calendar.py` can pull a day's events from Google, but it isn't wired into the app's UI yet and pushing local changes back to Google isn't implemented. See the open issues if you'd like to help.
 
 ---
 
@@ -112,10 +123,10 @@ Both files are git-ignored and must never be committed.
 
 ### Nested to-do list
 - Flat tasks and collapsible folders (e.g. Physics → Kinematics → today's problems)
-- Date tags: *today*, *tomorrow*, *someday* — tags roll forward automatically at midnight
-- Drag-and-drop reordering within the list
+- Date tags: *Today*, *Tomorrow*, *on Mon*. Shown as a pill on each to-do (red when overdue) and rolled forward automatically each day, including to-dos inside folders
+- Drag a to-do onto the timeline to turn it into an event (drag-to-reorder within the list is not implemented yet)
 - Right-click context menu to schedule a task (Today / Tomorrow / Someday)
-- Delete completed tasks in bulk with one button
+- Delete completed tasks in bulk with one button (including ones inside folders)
 
 ### Focus timer
 - Click the ▶ button on any currently-active event to open a standalone focus timer popup
@@ -151,11 +162,11 @@ Both files are git-ignored and must never be committed.
 - Scrollable modal: theme picker (shows each theme's actual colors as a preview), font picker, day start/end hour sliders, calendar zoom slider (30–80 px/hr), sound effects toggle, confetti toggle, lofi toggle
 
 ### Local-first & privacy
-- All data lives in plain JSON files in `assets/`: `events.json`, `todos.json`, `settings.json`, `player_data.json`
+- All data lives in plain JSON files on your machine: `events.json`, `todos.json`, `settings.json`, `player_data.json`
 - Personal files are git-ignored; `*.example.json` templates are included
 - Nothing is uploaded anywhere
 
-### Optional: Google Calendar sync
+### Optional: Google Calendar sync (experimental)
 - `google_calendar.py` — standalone OAuth2 flow using `google-api-python-client`
 - Bring your own `credentials.json` from Google Cloud Console; token is stored locally and never committed
 
@@ -165,12 +176,28 @@ Both files are git-ignored and must never be committed.
 
 | File | Contents |
 |---|---|
-| `assets/settings.json` | Theme, day hours, zoom, toggles |
-| `assets/todos.json` | To-do list and folder tree |
-| `assets/events.json` | Scheduled calendar events |
-| `assets/player_data.json` | Coin count |
+| `settings.json` | Theme, day hours, zoom, toggles |
+| `todos.json` | To-do list and folder tree |
+| `events.json` | Scheduled calendar events |
+| `player_data.json` | Coin count |
 
-These are git-ignored. Copy an `*.example.json` to get started, or just run the app — it creates fresh files automatically.
+Where they live:
+
+| How you run Foci | Data folder |
+|---|---|
+| From source (`python main.py`) | `assets/` in the repo |
+| Packaged app on Windows | `%APPDATA%\Foci` |
+| Packaged app on macOS | `~/Library/Application Support/Foci` |
+| Packaged app on Linux | `$XDG_DATA_HOME/Foci` (default `~/.local/share/Foci`) |
+| Any, with `FOCI_DATA_DIR` set | that folder |
+
+The files in `assets/` are git-ignored. Copy an `*.example.json` to get started, or just run the app and it creates fresh files. Corrupt or hand-edited files are repaired field by field on load instead of crashing the app.
+
+---
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the project layout and how to run the tests. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
