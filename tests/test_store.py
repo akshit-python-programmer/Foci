@@ -287,3 +287,54 @@ def test_app_root_does_not_depend_on_cwd(monkeypatch, tmp_path):
     monkeypatch.delattr("sys._MEIPASS", raising=False)
     monkeypatch.chdir(tmp_path)
     assert os.path.isfile(os.path.join(store.app_root(), "main.py"))
+
+
+# --- keyboard navigation ----------------------------------------------------
+
+def _tree():
+    return [
+        {"type": "todo", "title": "a"},
+        {"type": "folder", "name": "F", "is_open": True, "children": [
+            {"type": "todo", "title": "f1"},
+            {"type": "folder", "name": "closed", "is_open": False, "children": [
+                {"type": "todo", "title": "hidden"},
+            ]},
+        ]},
+        {"type": "todo", "title": "b"},
+    ]
+
+
+def test_visible_paths_skip_closed_folders():
+    assert store.visible_todo_paths(_tree()) == [(0,), (1,), (1, 0), (1, 1), (2,)]
+    assert store.visible_todo_paths([]) == []
+
+
+def test_get_todo_at():
+    tree = _tree()
+    assert store.get_todo_at(tree, (1, 0))["title"] == "f1"
+    assert store.get_todo_at(tree, (1, 1, 0))["title"] == "hidden"
+    assert store.get_todo_at(tree, (9,)) is None
+    assert store.get_todo_at(tree, (0, 0)) is None  # a to-do has no children
+    assert store.get_todo_at(tree, ()) is None
+
+
+def test_move_selection():
+    tree = _tree()
+    assert store.move_selection(tree, None, +1) == (0,)
+    assert store.move_selection(tree, None, -1) == (2,)
+    assert store.move_selection(tree, (1,), +1) == (1, 0)
+    assert store.move_selection(tree, (1, 1), +1) == (2,)  # skips hidden child
+    assert store.move_selection(tree, (2,), +1) == (2,)    # stops at the end
+    assert store.move_selection(tree, (0,), -1) == (0,)
+    assert store.move_selection([], None, +1) is None
+
+
+def test_remove_todo_at_and_clamp():
+    tree = _tree()
+    assert store.remove_todo_at(tree, (1, 0))["title"] == "f1"
+    assert store.remove_todo_at(tree, (7,)) is None
+    assert store.clamp_selection(tree, (1, 1)) == (1, 0)
+    store.remove_todo_at(tree, (2,))
+    assert store.clamp_selection(tree, (2,)) == (1, 0)
+    assert store.clamp_selection([], (0,)) is None
+    assert store.clamp_selection(tree, None) is None

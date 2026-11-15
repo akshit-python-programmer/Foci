@@ -54,3 +54,72 @@ def test_stats_popup_renders(stop_after_frames):
     with pytest.raises(_StopDialog):
         main.show_stats_popup(main.events, main.screen, main.font_cache,
                               main.settings.get("font_path"), main.WIDTH, main.HEIGHT)
+
+
+# --- keyboard shortcuts -----------------------------------------------------
+
+@pytest.fixture
+def sample_todos(monkeypatch):
+    todos = [
+        {"type": "todo", "title": "a", "done": False},
+        {"type": "folder", "name": "F", "is_open": True, "children": [
+            {"type": "todo", "title": "f1", "done": False},
+        ]},
+    ]
+    monkeypatch.setattr(main, "todos", todos)
+    monkeypatch.setattr(main, "selected_todo_path", None)
+    monkeypatch.setattr(main, "save_todos", lambda: None)
+    monkeypatch.setattr(main, "trigger_motivational_quote", lambda *a, **k: None)
+    return todos
+
+
+def test_arrow_keys_walk_into_open_folders(sample_todos):
+    for _ in range(3):
+        assert main.handle_todo_shortcut(pygame.K_DOWN)
+    assert main.selected_todo_path == (1, 0)
+    main.handle_todo_shortcut(pygame.K_k)
+    assert main.selected_todo_path == (1,)
+
+
+def test_space_checks_off_nested_todo(sample_todos):
+    main.selected_todo_path = (1, 0)
+    assert main.handle_todo_shortcut(pygame.K_SPACE)
+    assert sample_todos[1]["children"][0]["done"] is True
+
+
+def test_space_on_folder_toggles_it(sample_todos):
+    main.selected_todo_path = (1,)
+    main.handle_todo_shortcut(pygame.K_RETURN)
+    assert sample_todos[1]["is_open"] is False
+
+
+def test_number_keys_schedule(sample_todos):
+    main.selected_todo_path = (0,)
+    main.handle_todo_shortcut(pygame.K_2)
+    assert sample_todos[0]["tag"] == "tmr"
+    main.handle_todo_shortcut(pygame.K_3)
+    assert "tag" not in sample_todos[0]
+
+
+def test_delete_key_removes_and_keeps_selection_valid(sample_todos):
+    main.selected_todo_path = (1, 0)
+    main.handle_todo_shortcut(pygame.K_DELETE)
+    assert sample_todos[1]["children"] == []
+    assert main.selected_todo_path == (1,)
+
+
+def test_keys_without_selection_are_ignored(sample_todos):
+    assert main.handle_todo_shortcut(pygame.K_SPACE) is False
+    assert main.handle_todo_shortcut(pygame.K_1) is False
+    assert main.handle_todo_shortcut(pygame.K_ESCAPE) is True
+
+
+def test_selected_row_is_drawn(sample_todos, monkeypatch):
+    main.selected_todo_path = (1, 0)
+    main.draw_todo_list((-100, -100))  # must not raise
+
+
+def test_shortcuts_help_closes_on_key(monkeypatch):
+    pygame.event.clear()
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, unicode="a", mod=0, scancode=0))
+    main.show_shortcuts_help()  # returns instead of looping forever

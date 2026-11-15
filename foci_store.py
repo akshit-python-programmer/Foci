@@ -318,3 +318,73 @@ def todo_tag_label(item, today=None):
             pass
     labels = {"today": "Today", "tmr": "Tomorrow"}
     return labels.get(tag, tag), overdue
+
+
+# --- Keyboard navigation of the to-do tree ----------------------------------
+# A "path" is a tuple of child indexes, e.g. (2,) is the third top-level item
+# and (2, 0) is the first child of that folder.
+
+def visible_todo_paths(items, prefix=()):
+    """Paths of every row currently shown in the list, in display order.
+
+    Children are included only when their folder is open, so arrow-key
+    navigation matches what the user sees.
+    """
+    paths = []
+    for i, item in enumerate(items):
+        path = prefix + (i,)
+        paths.append(path)
+        if item.get("type") == "folder" and item.get("is_open"):
+            paths.extend(visible_todo_paths(item.get("children", []), path))
+    return paths
+
+
+def get_todo_at(items, path):
+    """Return the item at ``path`` or ``None`` if the path no longer exists."""
+    if not path:
+        return None
+    current = None
+    siblings = items
+    for index in path:
+        if not isinstance(siblings, list) or not 0 <= index < len(siblings):
+            return None
+        current = siblings[index]
+        siblings = current.get("children") if current.get("type") == "folder" else None
+    return current
+
+
+def remove_todo_at(items, path):
+    """Remove and return the item at ``path`` (``None`` if it doesn't exist)."""
+    if get_todo_at(items, path) is None:
+        return None
+    parent = items if len(path) == 1 else get_todo_at(items, path[:-1])["children"]
+    return parent.pop(path[-1])
+
+
+def move_selection(items, current, delta):
+    """Move the keyboard selection ``delta`` rows up (-) or down (+).
+
+    With no (or a stale) selection, Down starts at the first row and Up at the
+    last. The selection stops at the ends instead of wrapping.
+    """
+    paths = visible_todo_paths(items)
+    if not paths:
+        return None
+    if current not in paths:
+        return paths[0] if delta > 0 else paths[-1]
+    index = max(0, min(len(paths) - 1, paths.index(current) + delta))
+    return paths[index]
+
+
+def clamp_selection(items, current):
+    """Keep a selection valid after the list changes (e.g. a delete)."""
+    if current is None:
+        return None
+    paths = visible_todo_paths(items)
+    if not paths:
+        return None
+    if current in paths:
+        return current
+    # Fall back to the nearest row at or before where the old one was.
+    earlier = [p for p in paths if p < current]
+    return earlier[-1] if earlier else paths[0]
