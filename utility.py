@@ -1,7 +1,6 @@
 import pygame
 import sys
 import os
-import datetime
 import math
 import time
 import random
@@ -50,8 +49,7 @@ def get_event_id(ev):
 
 def format_time(seconds):
     """Formats seconds into a MM:SS string."""
-    td = datetime.timedelta(seconds=int(max(0, seconds)))
-    m, s = divmod(td.seconds, 60)
+    m, s = divmod(int(max(0, seconds)), 60)
     return f"{m:02d}:{s:02d}"
 
 def eased_progress(t):

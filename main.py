@@ -8,7 +8,6 @@ import random
 import glob
 import time
 import multiprocessing
-from multiprocessing import Queue
 from pygame import gfxdraw
 import math
 from utility import * # Import all helper functions
@@ -3080,11 +3079,6 @@ def edit_or_delete_event_at_pos(pos, current_scroll, queue):
             show_focus_timer(event)
             return True
     return False
-
-
-def event_add_window(pos=None, edit_event=None):
-    # --- Animation & Style Setup ---
-    start_time = time.time() # noqa
 
 
 def show_coin_counter_popup(event):
