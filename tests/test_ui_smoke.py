@@ -123,3 +123,26 @@ def test_shortcuts_help_closes_on_key(monkeypatch):
     pygame.event.clear()
     pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a, unicode="a", mod=0, scancode=0))
     main.show_shortcuts_help()  # returns instead of looping forever
+
+
+# --- themes -----------------------------------------------------------------
+
+REQUIRED_THEME_KEYS = {
+    "background", "text", "event_done_color", "event_dimmed", "hour_line",
+    "title_color", "progress_bar", "current_event_dim", "settings_bg",
+    "todo_bg", "todo_item_bg", "todo_item_hover", "button_bg", "color_choices",
+}
+
+
+@pytest.mark.parametrize("name", list(main.THEMES))
+def test_every_theme_is_complete_and_renders(name, monkeypatch):
+    theme = main.THEMES[name]
+    assert REQUIRED_THEME_KEYS <= theme.keys(), REQUIRED_THEME_KEYS - theme.keys()
+    if theme.get("use_gradient_bg"):
+        assert {"gradient_start", "gradient_end"} <= theme.keys()
+    assert len(theme["color_choices"]) == 5
+    monkeypatch.setattr(main, "THEME", theme)
+    monkeypatch.setattr(main, "current_theme", name)
+    layout = main.calculate_event_layout(main.events, main.WIDTH - main.EVENT_X - main.EVENT_RIGHT_MARGIN)
+    main.draw_day_view(layout)
+    main.draw_todo_list((-1, -1))

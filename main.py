@@ -386,6 +386,79 @@ THEMES = {
             (255, 192, 203), # Pink
         ],
     },
+    "Ocean Breeze": {
+        "background": (236, 248, 250),  # Sea-foam white
+        "text": (30, 60, 75),
+        "event_done_color": (190, 225, 215),
+        "event_dimmed": (205, 225, 232),
+        "hour_line": (190, 215, 225),
+        "title_color": (0, 119, 145),  # Deep teal
+        "progress_bar": (0, 150, 170),
+        "current_event_dim": (150, 210, 225),
+        "settings_bg": (245, 252, 253),
+        "todo_bg": (214, 236, 242),
+        "todo_item_bg": (238, 248, 251),
+        "todo_item_hover": (226, 242, 247),
+        "button_bg": (200, 228, 236),
+        "gradient_start": (178, 235, 242),  # Light aqua
+        "gradient_end": (204, 229, 255),  # Pale sky
+        "use_gradient_bg": True,
+        "color_choices": [
+            (128, 203, 196),  # Seafoam
+            (144, 202, 249),  # Sky
+            (255, 224, 178),  # Sand
+            (179, 229, 252),  # Shallow water
+            (248, 187, 208),  # Coral pink
+        ],
+    },
+    "Lavender Dusk": {
+        "background": (36, 30, 52),  # Deep violet
+        "text": (230, 222, 245),
+        "event_done_color": (60, 70, 70),
+        "event_dimmed": (62, 54, 82),
+        "hour_line": (70, 60, 95),
+        "title_color": (200, 180, 255),
+        "progress_bar": (167, 139, 250),
+        "current_event_dim": (130, 110, 190),
+        "settings_bg": (44, 37, 63),
+        "todo_bg": (40, 33, 58),
+        "todo_item_bg": (54, 46, 78),
+        "todo_item_hover": (66, 57, 94),
+        "button_bg": (70, 60, 100),
+        "gradient_start": (45, 35, 70),  # Twilight
+        "gradient_end": (70, 45, 85),  # Plum
+        "use_gradient_bg": True,
+        "color_choices": [
+            (167, 139, 250),  # Lavender
+            (244, 143, 177),  # Rose
+            (128, 222, 234),  # Cyan glow
+            (255, 204, 128),  # Lamp light
+            (129, 199, 132),  # Sage
+        ],
+    },
+    "Matcha Latte": {
+        "background": (246, 243, 232),  # Warm cream
+        "text": (60, 66, 46),
+        "event_done_color": (200, 220, 180),
+        "event_dimmed": (226, 224, 210),
+        "hour_line": (222, 216, 196),
+        "title_color": (96, 128, 56),  # Matcha green
+        "progress_bar": (124, 160, 82),
+        "current_event_dim": (190, 210, 160),
+        "settings_bg": (250, 248, 240),
+        "todo_bg": (232, 230, 212),
+        "todo_item_bg": (247, 245, 236),
+        "todo_item_hover": (238, 236, 222),
+        "button_bg": (220, 226, 196),
+        "use_gradient_bg": False,
+        "color_choices": [
+            (174, 203, 132),  # Matcha
+            (222, 196, 160),  # Latte
+            (240, 214, 170),  # Oat
+            (196, 220, 190),  # Mint
+            (232, 190, 172),  # Hojicha
+        ],
+    },
     }
     
 current_theme = "Serene Morning"
