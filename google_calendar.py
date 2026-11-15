@@ -1,12 +1,26 @@
+"""Optional Google Calendar sync for Foci (experimental, not yet wired into the UI).
+
+Needs the extra dependencies from requirements.txt and a ``credentials.json``
+OAuth client file in the Foci data directory (``assets/`` when running from
+source).  The pure conversion helpers at the top of this module work without
+the Google libraries installed, which keeps them unit-testable.
+"""
+
 import datetime
 import os.path
-import sys
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google.auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+try:
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+    GOOGLE_LIBS_AVAILABLE = True
+except ImportError:  # optional dependency
+    GOOGLE_LIBS_AVAILABLE = False
+
+    class HttpError(Exception):
+        pass
 
 # If modifying these scopes, delete token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -18,11 +32,66 @@ from foci_store import user_data_dir
 CREDENTIALS_FILE = os.path.join(user_data_dir(), "credentials.json")
 TOKEN_FILE = os.path.join(user_data_dir(), "token.json")
 
+SYNCED_EVENT_COLOR = [135, 206, 250]
+
+
+def local_day_bounds(date, tz=None):
+    """RFC 3339 start/end of ``date`` in the user's local timezone.
+
+    The previous version appended "Z" to a naive local midnight, which told
+    Google the day started at 00:00 UTC and returned the wrong events for
+    anyone not in UTC.
+    """
+    tz = tz or datetime.datetime.now().astimezone().tzinfo
+    start = datetime.datetime.combine(date, datetime.time.min, tzinfo=tz)
+    end = start + datetime.timedelta(days=1)
+    return start.isoformat(), end.isoformat()
+
+
+def _parse_rfc3339(value):
+    # Python < 3.11 fromisoformat() does not accept a trailing "Z".
+    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def gcal_event_to_local(gcal_event, tz=None):
+    """Convert a Google Calendar API event into a Foci event dict.
+
+    Returns ``None`` for all-day events (they have no time slot on the
+    timeline) and for events without usable start/end times.
+    Times are converted to the local timezone before taking hour/minute.
+    """
+    start = (gcal_event.get("start") or {}).get("dateTime")
+    end = (gcal_event.get("end") or {}).get("dateTime")
+    if not start or not end:
+        return None  # all-day ("date") or malformed event
+
+    tz = tz or datetime.datetime.now().astimezone().tzinfo
+    try:
+        start_dt = _parse_rfc3339(start).astimezone(tz)
+        end_dt = _parse_rfc3339(end).astimezone(tz)
+    except ValueError:
+        return None
+
+    duration = max(15, int((end_dt - start_dt).total_seconds() // 60))
+    return {
+        "title": gcal_event.get("summary") or "No Title",
+        "hour": start_dt.hour,
+        "minute": start_dt.minute,
+        "duration": duration,
+        "done": False,
+        "color": list(SYNCED_EVENT_COLOR),
+        "icon": 0,
+        "google_id": gcal_event.get("id"),
+    }
+
 
 def get_service():
     """Shows basic usage of the Google Calendar API.
     Prints the start and name of the next 10 events on the user's calendar.
     """
+    if not GOOGLE_LIBS_AVAILABLE:
+        print("Google Calendar sync needs: pip install google-api-python-client google-auth-oauthlib")
+        return None
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -75,8 +144,7 @@ def sync_events(date, local_events):
         return local_events # Return local events if sync fails
 
     # --- 1. Fetch Google Calendar events for the day ---
-    start_of_day = datetime.datetime.combine(date, datetime.time.min).isoformat() + "Z"
-    end_of_day = datetime.datetime.combine(date, datetime.time.max).isoformat() + "Z"
+    start_of_day, end_of_day = local_day_bounds(date)
 
     try:
         gcal_events_result = (
@@ -124,29 +192,10 @@ def sync_events(date, local_events):
     # --- 4. Sync from Google to Local (Add new events from Google) ---
     for gcal_id, gcal_event in gcal_map.items():
         if gcal_id not in local_map:
-            # New event from Google, add it locally
-            try:
-                start = gcal_event["start"].get("dateTime", gcal_event["start"].get("date"))
-                end = gcal_event["end"].get("dateTime", gcal_event["end"].get("date"))
-                
-                start_dt = datetime.datetime.fromisoformat(start.replace("Z", "+00:00"))
-                end_dt = datetime.datetime.fromisoformat(end.replace("Z", "+00:00"))
-
-                duration = int((end_dt - start_dt).total_seconds() / 60)
-
-                new_local_event = {
-                    "title": gcal_event.get("summary", "No Title"),
-                    "hour": start_dt.hour,
-                    "minute": start_dt.minute,
-                    "duration": duration,
-                    "done": False,
-                    "color": [135, 206, 250], # Default color for synced events
-                    "icon": 0,
-                    "google_id": gcal_id,
-                }
+            # New event from Google, add it locally (all-day events are skipped)
+            new_local_event = gcal_event_to_local(gcal_event)
+            if new_local_event is not None:
                 synced_events.append(new_local_event)
-            except Exception as e:
-                print(f"Error parsing Google event '{gcal_event.get('summary')}': {e}")
 
     # --- 5. Handle Deletions ---
     # If a local event with a google_id is no longer in gcal_map, it was deleted on Google.
