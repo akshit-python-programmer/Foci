@@ -5,6 +5,7 @@ All notable changes to Foci are documented here. The format follows [Keep a Chan
 ## [Unreleased]
 
 ### Fixed
+- Crash caused by a list index error. Reported by Shourya.
 - **Opening the Add/Edit Event dialog crashed the app** (`UnboundLocalError: y_offset`).
 - Pressing <kbd>S</kbd> for stats crashed the app (`NameError: font_path`).
 - **Packaged app lost all data on restart.** The one-file `.exe` wrote events, to-dos, settings and coins into PyInstaller's temporary extraction folder, which is deleted on exit. User data now lives in the OS app-data folder for packaged builds (`%APPDATA%\Foci` etc.) and stays in `assets/` when running from source.

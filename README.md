@@ -19,6 +19,16 @@
 
 Foci is a desktop planner I built for myself because most productivity apps felt loud and punishing. It puts a visual hourly timeline, a nested to-do list, and a focus timer side by side — with calm themes, optional lofi music, and small rewards for finishing things. Inspired by tools like Tiimo and Llama Life, but built from scratch with no UI framework.
 
+## Recent updates
+
+Thanks to the people who've helped shape Foci:
+
+- ⌨️ **Keyboard shortcuts**, suggested by **Fazal**. Get around your tasks without the mouse: select, check off, schedule, add and delete to-dos, and move between days. Press <kbd>?</kbd> in the app to see them all ([full list](#keyboard-shortcuts)).
+- 🐛 **Crash fix**, reported by **Shourya**. Foci could crash with a list index error; this is fixed in the latest version.
+- 🎨 **Three new themes**, suggested by **Anaconda bro**: *Ocean Breeze*, *Lavender Dusk* and *Matcha Latte*.
+
+Found a bug or have an idea? [Open an issue](https://github.com/akshit-python-programmer/Foci/issues/new/choose) and you could be on this list too.
+
 ## Screenshot
 
 ![Foci main view](demo/example%20of%20how%20it%20looks%20like%20.png)
@@ -141,7 +151,7 @@ Both files are git-ignored and must never be committed.
 - **Windows SMTC integration** — registers with the system media flyout so track name appears in the tray and media keys (⏯ ⏭ ⏮) work system-wide
 
 ### Themes & fonts
-- 11 built-in themes: **Serene Morning**, **Golden Hour**, **Midnight Deep**, **Cyberpunk Night**, **Forest Canopy**, **Classic Light**, **Classic Dark**, **Kyoto Spring**, and new in this release **Ocean Breeze**, **Lavender Dusk** and **Matcha Latte** (suggested by **Anaconda bro**)
+- 11 built-in themes: **Serene Morning**, **Golden Hour**, **Midnight Deep**, **Cyberpunk Night**, **Forest Canopy**, **Classic Light**, **Classic Dark**, **Kyoto Spring**, **Ocean Breeze**, **Lavender Dusk**, **Matcha Latte**
 - Several themes feature animated slow-wave gradient backgrounds
 - Font picker scans `assets/` for any `.ttf` / `.otf` and previews them live (ships with Domine, Roboto, Arimo, SansCode, RobotoCondensed)
 
@@ -156,7 +166,7 @@ Both files are git-ignored and must never be committed.
 - Animated donut charts (ease-out cubic) showing tasks completed % and time focused % for the day
 
 ### Keyboard shortcuts
-*Suggested by **Fazal**.* Press <kbd>?</kbd> in the app to see them all.
+Press <kbd>?</kbd> in the app to see them all.
 
 | Keys | Action |
 |---|---|
@@ -212,13 +222,6 @@ Where they live:
 The files in `assets/` are git-ignored. Copy an `*.example.json` to get started, or just run the app and it creates fresh files. Corrupt or hand-edited files are repaired field by field on load instead of crashing the app.
 
 ---
-
-## Acknowledgements
-
-Thanks to the people who've shaped Foci with their ideas:
-
-- **Fazal**: suggested keyboard shortcuts for getting around tasks quickly
-- **Anaconda bro**: suggested the Ocean Breeze, Lavender Dusk and Matcha Latte themes
 
 ## Contributing
 
