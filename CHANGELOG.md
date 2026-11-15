@@ -5,6 +5,8 @@ All notable changes to Foci are documented here. The format follows [Keep a Chan
 ## [Unreleased]
 
 ### Fixed
+- **Opening the Add/Edit Event dialog crashed the app** (`UnboundLocalError: y_offset`).
+- Pressing <kbd>S</kbd> for stats crashed the app (`NameError: font_path`).
 - **Packaged app lost all data on restart.** The one-file `.exe` wrote events, to-dos, settings and coins into PyInstaller's temporary extraction folder, which is deleted on exit. User data now lives in the OS app-data folder for packaged builds (`%APPDATA%\Foci` etc.) and stays in `assets/` when running from source.
 - Launching `python path/to/main.py` from a different directory couldn't find fonts, icons or the coin sprite sheet. Resources now resolve relative to the app, not the working directory.
 - "Schedule for Tomorrow" set the `tmr` tag and then immediately deleted it.
@@ -16,6 +18,8 @@ All notable changes to Foci are documented here. The format follows [Keep a Chan
 - Packaged builds call `multiprocessing.freeze_support()` so the lofi player subprocess starts correctly.
 
 ### Added
+- **Keyboard shortcuts** for to-dos (select, check off, schedule, add, delete) and calendar navigation, plus a <kbd>?</kbd> help overlay. Suggested by Fazal.
+- **Three new themes**: Ocean Breeze, Lavender Dusk and Matcha Latte. Suggested by Anaconda bro.
 - To-dos show a date pill (*Today*, *Tomorrow*, *on Mon*), red when overdue.
 - `FOCI_DATA_DIR` environment variable to choose where data is stored.
 - `foci_store.py`: persistence and validation split out of `main.py` so it can be tested.
@@ -24,6 +28,7 @@ All notable changes to Foci are documented here. The format follows [Keep a Chan
 
 ### Changed
 - The built executable is named `Foci.exe` instead of `main.exe`.
+- The <kbd>T</kbd> theme shortcut now remembers the chosen theme.
 
 ## [1.0.0] - initial release
 

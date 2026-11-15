@@ -141,7 +141,7 @@ Both files are git-ignored and must never be committed.
 - **Windows SMTC integration** — registers with the system media flyout so track name appears in the tray and media keys (⏯ ⏭ ⏮) work system-wide
 
 ### Themes & fonts
-- 8 built-in themes: **Serene Morning**, **Golden Hour**, **Midnight Deep**, **Cyberpunk Night**, **Forest Canopy**, **Classic Light**, **Classic Dark**, **Kyoto Spring**
+- 11 built-in themes: **Serene Morning**, **Golden Hour**, **Midnight Deep**, **Cyberpunk Night**, **Forest Canopy**, **Classic Light**, **Classic Dark**, **Kyoto Spring**, and new in this release **Ocean Breeze**, **Lavender Dusk** and **Matcha Latte** (suggested by **Anaconda bro**)
 - Several themes feature animated slow-wave gradient backgrounds
 - Font picker scans `assets/` for any `.ttf` / `.otf` and previews them live (ships with Domine, Roboto, Arimo, SansCode, RobotoCondensed)
 
@@ -154,6 +154,24 @@ Both files are git-ignored and must never be committed.
 
 ### Stats
 - Animated donut charts (ease-out cubic) showing tasks completed % and time focused % for the day
+
+### Keyboard shortcuts
+*Suggested by **Fazal**.* Press <kbd>?</kbd> in the app to see them all.
+
+| Keys | Action |
+|---|---|
+| <kbd>↑</kbd> <kbd>↓</kbd> or <kbd>K</kbd> <kbd>J</kbd> | Select previous / next to-do (walks into open folders) |
+| <kbd>Space</kbd> / <kbd>Enter</kbd> | Check off the selected to-do, or open / close a folder |
+| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | Schedule for Today / Tomorrow / Someday |
+| <kbd>N</kbd> | New to-do |
+| <kbd>Delete</kbd> | Delete the selected to-do |
+| <kbd>Esc</kbd> | Clear the selection |
+| <kbd>←</kbd> <kbd>→</kbd> | Previous / next day (week, in weekly view) |
+| <kbd>Home</kbd> | Jump to today |
+| <kbd>W</kbd> | Toggle weekly view |
+| <kbd>S</kbd> | Today's stats |
+| <kbd>T</kbd> | Next theme |
+| <kbd>?</kbd> / <kbd>H</kbd> | Show the shortcuts overlay |
 
 ### Weekly view
 - 7-column overview with event cards per day; click a day to jump to it; today column is highlighted
@@ -194,6 +212,13 @@ Where they live:
 The files in `assets/` are git-ignored. Copy an `*.example.json` to get started, or just run the app and it creates fresh files. Corrupt or hand-edited files are repaired field by field on load instead of crashing the app.
 
 ---
+
+## Acknowledgements
+
+Thanks to the people who've shaped Foci with their ideas:
+
+- **Fazal**: suggested keyboard shortcuts for getting around tasks quickly
+- **Anaconda bro**: suggested the Ocean Breeze, Lavender Dusk and Matcha Latte themes
 
 ## Contributing
 
