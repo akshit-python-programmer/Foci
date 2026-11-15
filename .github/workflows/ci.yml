@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.13"]
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: pytest -q
+      - name: Smoke test (app starts headless)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys, tempfile
+          env = dict(os.environ, FOCI_DATA_DIR=tempfile.mkdtemp())
+          p = subprocess.Popen([sys.executable, "main.py"], env=env)
+          try:
+              code = p.wait(timeout=8)
+          except subprocess.TimeoutExpired:
+              p.kill()
+              print("main.py is running after 8s - OK")
+          else:
+              sys.exit(f"main.py exited early with code {code}")
+          PY
