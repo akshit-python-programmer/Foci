@@ -19,6 +19,12 @@
 
 Foci is a desktop planner I built for myself because most productivity apps felt loud and punishing. It puts a visual hourly timeline, a nested to-do list, and a focus timer side by side — with calm themes, optional lofi music, and small rewards for finishing things. Inspired by tools like Tiimo and Llama Life, but built from scratch with no UI framework.
 
+Recent Updates : 
+1. added new themes cafe,peach on requuest of Shaurya
+2. Implemented keyboard shortcuts on request of fazal.
+3. going to add proper google calendar integration on request of Anaconda_bro.
+4. fixed audio glitches bugs pointed out by shagun. 
+
 ## Screenshot
 
 ![Foci main view](demo/example%20of%20how%20it%20looks%20like%20.png)
