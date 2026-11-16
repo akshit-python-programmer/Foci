@@ -16,7 +16,7 @@
 </div>
 
 ---
-
+<a href="https://foci.akshitkumarlall.com">foci.akshitkumarlall.com</a>
 Foci is a desktop planner I built for myself because most productivity apps felt loud and punishing. It puts a visual hourly timeline, a nested to-do list, and a focus timer side by side — with calm themes, optional lofi music, and small rewards for finishing things. Inspired by tools like Tiimo and Llama Life, but built from scratch with no UI framework.
 
 Recent Updates : 
